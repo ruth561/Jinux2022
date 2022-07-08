@@ -32,7 +32,7 @@ devenv/run_qemu.sh ~/edk2/Build/Jinux2022LoaderX64/DEBUG_CLANG38/X64/Loader.efi 
 # これを、mnt ディレクトリにマウントすることで、起動時に用いたディスクを
 # 確認することができる。マウントは、ループバック機能を使用する。
 #
-sudo mount -o loop disk.img mnt
+# sudo mount -o loop disk.img mnt
 
 #
 # 確認が終わったら、アンマウントしておく

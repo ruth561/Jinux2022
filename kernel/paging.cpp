@@ -33,6 +33,8 @@ void SetupIdentityPageTable()
         }
     }
 
+    logger->debug("before set cr3\n");
     SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
+    logger->debug("after set cr3\n");
 }
 
