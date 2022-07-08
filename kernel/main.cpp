@@ -114,6 +114,12 @@ extern "C" void KernelMainNewStack(
     logger->debug("CR3: %016lx\n", cr3);
     logger->debug("CR4: %016lx\n", cr4);
 
+    uintptr_t frame_buffer_pointer = reinterpret_cast<uintptr_t>(frame_buffer_config.frame_buffer);
+    printk("frame buffer is at %p\n", frame_buffer_pointer);
+    uintptr_t physi_addr = Translate4LevelPaging(frame_buffer_pointer);
+    logger->info("%p -> %p\n", frame_buffer_pointer, physi_addr);
+    
+
 
     // メモリ管理の開始
     // ページングの設定

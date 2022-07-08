@@ -13,12 +13,59 @@ namespace
     const uint64_t kPageSize4K = 4096;
     const uint64_t kPageSize2M = 2 * 1024 * 1024;
     const uint64_t kPageSize1G = 1024 * 1024 * 1024;
+    
+
 
     alignas(4096) std::array<uint64_t, 512> pml4_table;
     alignas(4096) std::array<uint64_t, 512> pdp_table;
     alignas(4096) std::array<std::array<uint64_t, 512>, kPageDirectoryCount> page_directory;
 
 }
+
+
+uintptr_t Translate4LevelPaging(uintptr_t linear_address)
+{
+    LinearAddress4Level linear;
+    linear.data = linear_address;
+    // リニアアドレス構造体がきちんと各フィールドを表せているかの確認。
+    /* logger->debug("linear address %p, pml4 %lx, pdpt %lx, directory %lx, table %lx, offset %lx\n", 
+        linear.data, 
+        linear.bits.pml4,
+        linear.bits.pdpt, 
+        linear.bits.directory, 
+        linear.bits.table, 
+        linear.bits.offset); */
+    
+    // CR3レジスタからPML4の先頭アドレスを取得する。
+    uint64_t cr3 = GetCR3();
+    PageMapEntry *pml4 = reinterpret_cast<PageMapEntry *>(cr3 & ~static_cast<uint64_t>(0xfff));
+
+    // PML4のエントリがページを指し示すことはないので、
+    // すぐにPDPTの先頭アドレスを計算。
+    PageMapEntry *pdpt = reinterpret_cast<PageMapEntry *>(pml4[linear.bits.pml4].Pointer());
+    if (pdpt[linear.bits.pdpt].isPage()) {  // 1GiBのページの時（Huge Page）
+        logger->debug("1GiB page!\n");
+        return pdpt[linear.bits.pdpt].Pointer() + linear.Offset1GiB();
+    }
+
+    // PDPTエントリから指されるページディレクトリ
+    // Page Directory
+    PageMapEntry *pd = reinterpret_cast<PageMapEntry *>(pdpt[linear.bits.pdpt].Pointer());
+    if (pd[linear.bits.directory].isPage()) { // 2MiBのページの時
+        logger->debug("2MiB page!\n");
+        return pd[linear.bits.directory].Pointer() + linear.Offset2MiB();
+    }
+
+    // Page Table
+    PageMapEntry *pt = reinterpret_cast<PageMapEntry *>(pd[linear.bits.directory].Pointer());
+    if (pt[linear.bits.table].isPage()) { // 4KiBのページの時
+        logger->debug("4KiB page!\n");
+        return pt[linear.bits.table].Pointer() + linear.Offset4KiB();
+    }
+
+    return 0;
+}
+
 
 void SetupIdentityPageTable()
 {
@@ -30,10 +77,11 @@ void SetupIdentityPageTable()
         logger->debug("pdp_table[%d] = %lx\n", i, pdp_table[i]);
         for (int j = 0; j < 512; j++) {
             page_directory[i][j] = i * kPageSize1G + j * kPageSize2M | 0x083;
+            // logger->debug("    page_directory[%d][%d] = %lx\n", i, j, page_directory[i][j]);
         }
     }
 
-    logger->debug("before set cr3\n");
+    logger->debug("before set %p to cr3\n", &pml4_table[0]);
     SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
     logger->debug("after set cr3\n");
 }
