@@ -332,7 +332,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
     // PrintMemoryMap(map);
 
     /* ルートディレクトリを開く */
-    Print(L"Try to open rot dir...\n");
+    Print(L"Try to open root dir...\n");
     Status = OpenRootDir(image_handle, &root);
     if (Status != EFI_SUCCESS) {
         Print(L"Failed to open root dir\n");
@@ -488,9 +488,12 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
 
     /* エントリポイント用の関数のタイプを定義している */
     kernel_ehdr = (Elf64_Ehdr *) kernel_first_addr;
-    typedef void EntryPointType(struct FrameBufferConfig *);
+    typedef void EntryPointType(struct FrameBufferConfig *, 
+                                struct MemoryMap*);
     EntryPointType *entry_point = (EntryPointType *) kernel_ehdr->e_entry;
-    entry_point(&config);
+
+
+    entry_point(&config, &map);
 
     while (1) asm("hlt");
     return EFI_SUCCESS;

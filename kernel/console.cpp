@@ -44,15 +44,14 @@ void Console::NewLine()
     if (cursor_row_ < kRows - 1) {
         cursor_row_++;
     } else {
-        /*  まず、背景色をbg_color_でクリアする。 */
-        for (int y = 0; y < 16 * kRows; y++) {
-            for (int x = 0; x < 8 * kColumns; x++) {
-                writer_->Write(x, y, &bg_color_);
+        // １行ごとに背景を塗りつぶし、１行下の文字列を表示する。
+        for (int row = 0; row < kRows; row++) {
+            for (int y = row * 16; y < (row + 1) * 16; y++) {
+                for (int x = 0; x < 8 * kColumns; x++) {
+                    writer_->Write(x, y, &bg_color_);
+                }
             }
-        }
-
-        /*  buffer_のデータを一行ずつ移し替える。 */
-        for (int row = 0; row < kRows - 1; row++) {
+            if (row == kRows - 1) break;
             memcpy(buffer_[row], buffer_[row + 1], kColumns + 1);
             WriteString(writer_, 0, 16 * row, buffer_[row], &fg_color_);
         }
