@@ -1,0 +1,5 @@
+[Defines]
+    DEC_SPECIFICATION              = 0x00010005
+    PACKAGE_NAME                   = Jinux2022LoaderPkg
+    PACKAGE_GUID                   = 68e5c173-047f-4a1f-bf00-4883f68c09e1
+    PACKAGE_VERSION                = 0.1
