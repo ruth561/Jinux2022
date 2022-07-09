@@ -20,5 +20,8 @@ kernel.elf: $(OBJS) Makefile
 %.o: %.cpp Makefile
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
+%.o: %.c Makefile
+	clang $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	
 %.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<

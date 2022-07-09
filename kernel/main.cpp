@@ -1,6 +1,8 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdint>
+#include <malloc.h>
+#include <string.h>
 
 #include "asmfunc.h"
 #include "frame_buffer_config.hpp"
@@ -114,19 +116,15 @@ extern "C" void KernelMainNewStack(
     logger->debug("CR3: %016lx\n", cr3);
     logger->debug("CR4: %016lx\n", cr4);
 
-    uintptr_t frame_buffer_pointer = reinterpret_cast<uintptr_t>(frame_buffer_config.frame_buffer);
-    printk("frame buffer is at %p\n", frame_buffer_pointer);
-    uintptr_t physi_addr = Translate4LevelPaging(frame_buffer_pointer);
-    logger->info("%p -> %p\n", frame_buffer_pointer, physi_addr);
     
 
 
-    // メモリ管理の開始
-    // ページングの設定
+    // 恒等ページングの設定
     SetupIdentityPageTable();
-    logger->info("Paging structure mapped!!\n");
+    logger->info("Identity paging structure mapped!!\n");
 
-    // ビットマップメモリマネージャーの生成
+    // ビットマップメモリマネージャーの生成し、
+    // UEFIでの使用可能領域と使用不可領域をマップに設定。
     memory_manager = new(memory_manager_buf) BitmapMemoryManager;
     uintptr_t available_end = 0;
     for (
@@ -153,6 +151,19 @@ extern "C" void KernelMainNewStack(
     logger->info("Memory allocate map is at %p\n", memory_manager->BitMapAddress());
 
 
+    // カーネルで使用するmalloc用のヒープ領域の初期化。
+    if (InitializeHeap(memory_manager)) {
+        logger->error("Failed to allocate heap memory...\n");
+        Halt();
+    }
+
+    // mallocの使用が可能に！！！
+    char *str = reinterpret_cast<char *>(malloc(0x10));
+    strcpy(str, "hello, world!\n");
+    logger->debug("malloc %p -> %s\n", str, str);
+
+
+    
 
     logger->info("execute Halt() ...\n");
     Halt();
@@ -177,3 +188,4 @@ int printk(const char *format, ...) {
     console->PutString(s);
     return res;
 }
+

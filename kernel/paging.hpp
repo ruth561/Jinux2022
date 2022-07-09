@@ -51,10 +51,10 @@ union PageMapEntry
     }
 };
 
-
-
+/* cppで定義したほうが良いのでは？ 
 // ページングの最大の大きさをGBで指定する。
-const size_t kPageDirectoryCount = 300;
+const size_t kPageDirectoryCount = 300; */
+
 
 
 

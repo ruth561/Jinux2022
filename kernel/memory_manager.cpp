@@ -1,3 +1,5 @@
+#include <sys/types.h>
+
 #include "memory_manager.hpp"
 #include "logging.hpp"
 
@@ -63,7 +65,6 @@ bool BitmapMemoryManager::GetBit(FrameID frame) const
     return ((alloc_map_[line_id] >> bit_id) & 1) != 0;
 }
 
-// ビットマップのframeにallocatedを設定する。
 void BitmapMemoryManager::SetBit(FrameID frame, bool allocated)
 {
     size_t line_id = frame.ID() / kBitsPerMapLine;
@@ -74,4 +75,25 @@ void BitmapMemoryManager::SetBit(FrameID frame, bool allocated)
     } else {
         alloc_map_[line_id] &= ~(static_cast<uint64_t>(1) << bit_id);
     }
+}
+
+
+extern "C" caddr_t program_break, program_break_end;
+
+int InitializeHeap(BitmapMemoryManager *memory_manager)
+{
+    const int kHeapFrames = 64 * 512;   // ヒープ領域に使うカーネルのメモリ領域の大きさ（KiB）
+    const FrameID heap_start = memory_manager->Allocate(kHeapFrames); // 連続した空き領域を確保する。
+
+    if (heap_start.ID() == kNullFrame.ID()) {  // 確保に失敗した時
+        return -1;
+    }
+
+    // sbrk()で使用するグローバル変数の定義。
+    // これによりmallocが使えるようになる。
+    program_break = reinterpret_cast<caddr_t>(heap_start.Frame());
+    program_break_end = program_break + kHeapFrames * kBytesPerFrame;
+    logger->debug("Heap memory is mapped from %p to %p\n", program_break, program_break_end);
+    
+    return 0;
 }

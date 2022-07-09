@@ -13,8 +13,9 @@ namespace
     const uint64_t kPageSize4K = 4096;
     const uint64_t kPageSize2M = 2 * 1024 * 1024;
     const uint64_t kPageSize1G = 1024 * 1024 * 1024;
-    
 
+    // ページングの最大の大きさをGBで指定する。
+    const size_t kPageDirectoryCount = 300;
 
     alignas(4096) std::array<uint64_t, 512> pml4_table;
     alignas(4096) std::array<uint64_t, 512> pdp_table;
@@ -22,6 +23,27 @@ namespace
 
 }
 
+
+
+
+void SetupIdentityPageTable()
+{
+    pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table[0]) | 0x003;
+    logger->debug("pml4_table[0] = %lx\n", pml4_table[0]);
+
+    for (int i = 0; i < kPageDirectoryCount; i++) {
+        pdp_table[i] = reinterpret_cast<uint64_t>(&page_directory[i][0]) | 0x003;
+        logger->debug("pdp_table[%d] = %lx\n", i, pdp_table[i]);
+        for (int j = 0; j < 512; j++) {
+            page_directory[i][j] = i * kPageSize1G + j * kPageSize2M | 0x083;
+            // logger->debug("    page_directory[%d][%d] = %lx\n", i, j, page_directory[i][j]);
+        }
+    }
+
+    logger->debug("before set %p to cr3\n", &pml4_table[0]);
+    SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
+    logger->debug("after set cr3\n");
+}
 
 uintptr_t Translate4LevelPaging(uintptr_t linear_address)
 {
@@ -65,24 +87,3 @@ uintptr_t Translate4LevelPaging(uintptr_t linear_address)
 
     return 0;
 }
-
-
-void SetupIdentityPageTable()
-{
-    pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table[0]) | 0x003;
-    logger->debug("pml4_table[0] = %lx\n", pml4_table[0]);
-
-    for (int i = 0; i < kPageDirectoryCount; i++) {
-        pdp_table[i] = reinterpret_cast<uint64_t>(&page_directory[i][0]) | 0x003;
-        logger->debug("pdp_table[%d] = %lx\n", i, pdp_table[i]);
-        for (int j = 0; j < 512; j++) {
-            page_directory[i][j] = i * kPageSize1G + j * kPageSize2M | 0x083;
-            // logger->debug("    page_directory[%d][%d] = %lx\n", i, j, page_directory[i][j]);
-        }
-    }
-
-    logger->debug("before set %p to cr3\n", &pml4_table[0]);
-    SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
-    logger->debug("after set cr3\n");
-}
-

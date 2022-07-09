@@ -43,7 +43,11 @@ private:
     size_t id_;
 };
 
+// フレームが確保できなかったときなどに使用されるオブジェクト。
 static const FrameID kNullFrame{~static_cast<size_t>(0)};
+
+
+
 
 class BitmapMemoryManager
 {
@@ -82,3 +86,11 @@ private:
     void SetBit(FrameID frame, bool allocated); // フレームをallocated状態にする。
 
 };
+
+
+// カーネルで使用するためのヒープ領域を確保し初期化する関数。
+// 初期化に成功すれば0を返す。
+// 初期化に失敗すれば-1を返す。
+// 実行成功後、NewLibのmallocが使用可能になる。
+int InitializeHeap(BitmapMemoryManager *memory_manager);
+
