@@ -12,6 +12,7 @@
 #include "segment.hpp"
 #include "paging.hpp"
 #include "memory_manager.hpp"
+#include "interrupt.hpp"
 
 // OSを停止させる関数。CPUの動きを止めるので、安全。
 void Halt(void);
@@ -159,11 +160,21 @@ extern "C" void KernelMainNewStack(
 
     // mallocの使用が可能に！！！
     char *str = reinterpret_cast<char *>(malloc(0x10));
-    strcpy(str, "hello, world!\n");
+    strcpy(str, "hello, world!");
     logger->debug("malloc %p -> %s\n", str, str);
 
+    // 割り込み・例外ハンドラの設定
+    SetupInterruptDescriptorTable();
+    logger->info("Complete setup IDT!\n");
 
-    
+    /* ０除算例外を引き起こすコード
+    __asm__("divb 0"); */
+    uintptr_t p = 0x6234567890;
+    logger->debug("memory access %08x(%p)\n", *reinterpret_cast<int *>(p), p);
+    /* for (uint64_t i = 0; i < 64; i++) {
+        p = (static_cast<uint64_t>(1) << i);
+        logger->debug("memory access %08x(%p)\n", *reinterpret_cast<int *>(p), p);
+    } */
 
     logger->info("execute Halt() ...\n");
     Halt();

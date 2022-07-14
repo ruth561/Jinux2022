@@ -28,12 +28,13 @@ namespace
 
 void SetupIdentityPageTable()
 {
-    pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table[0]) | 0x003;
-    logger->debug("pml4_table[0] = %lx\n", pml4_table[0]);
+    /* コメントアウトしているのは設定した値をコンソールに出力するというもの。 */
 
+    pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table[0]) | 0x003;
+    // logger->debug("pml4_table[0] = %lx\n", pml4_table[0]);
     for (int i = 0; i < kPageDirectoryCount; i++) {
         pdp_table[i] = reinterpret_cast<uint64_t>(&page_directory[i][0]) | 0x003;
-        logger->debug("pdp_table[%d] = %lx\n", i, pdp_table[i]);
+        // logger->debug("pdp_table[%d] = %lx\n", i, pdp_table[i]);
         for (int j = 0; j < 512; j++) {
             page_directory[i][j] = i * kPageSize1G + j * kPageSize2M | 0x083;
             // logger->debug("    page_directory[%d][%d] = %lx\n", i, j, page_directory[i][j]);

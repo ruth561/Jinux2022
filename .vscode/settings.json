@@ -6,5 +6,6 @@
     "C_Cpp.default.includePath":
 		[
 			"./devenv/x86_64-elf/include/"
-		]
+        ],
+        "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools"
 }

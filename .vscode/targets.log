@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat Jul  9 13:53:00 2022
+# Make data base, printed on Thu Jul 14 11:03:04 2022
 
 # Variables
 
@@ -49,7 +49,7 @@ VSCODE_NLS_CONFIG = {"locale":"ja","availableLanguages":{"*":"ja"},"_languagePac
 # environment
 _ = /usr/share/code/code
 # environment
-JOURNAL_STREAM = 8:40777
+JOURNAL_STREAM = 8:50519
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -67,7 +67,7 @@ DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-MANAGERPID = 1621
+MANAGERPID = 1658
 # environment
 CLUTTER_IM_MODULE = fcitx
 # environment
@@ -81,7 +81,7 @@ PATH = /home/ruth/.local/bin:/opt/java/jdk-11.0.2/bin:/home/ruth/.local/bin:/usr
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1844,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1844
+SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1881,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1881
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -91,7 +91,7 @@ VSCODE_LOG_STACK = false
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = d62c251f005a4dfdb7c36195ded1c970
+INVOCATION_ID = 5019ca73cd0547d8aa806dd01b764acf
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -101,7 +101,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 2309
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2245
 # automatic
 %F = $(notdir $%)
 # environment
@@ -115,7 +115,7 @@ PWD = /home/ruth/Documents/Jinux2022
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1792
+SSH_AGENT_PID = 1829
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -151,7 +151,7 @@ SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-821434f3-7452-4023-8e08-0739829c1579.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-47b6b2b8-453e-464a-853a-9694e6da2660.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -213,7 +213,7 @@ GJS_DEBUG_OUTPUT = stderr
 # environment
 LANG = C
 # environment
-VSCODE_PID = 2309
+VSCODE_PID = 2245
 # variable set hash-table stats:
 # Load=101/1024=10%, Rehash=0, Collisions=13/123=11%
 
@@ -281,6 +281,6 @@ GNUmakefile:
 # strcache performance: lookups = 23 / hit rate = 13%
 # hash-table stats:
 # Load=20/8192=0%, Rehash=0, Collisions=1/23=4%
-# Finished Make data base on Sat Jul  9 13:53:00 2022
+# Finished Make data base on Thu Jul 14 11:03:04 2022
 
  
