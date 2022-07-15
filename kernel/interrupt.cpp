@@ -1,14 +1,19 @@
+#include <deque>
+
 #include "interrupt.hpp"
+#include "timer.hpp"
 #include "logging.hpp"
+#include "message.hpp"
+
 extern logging::Logger *logger;
-
-
+extern TimerManager *timer_manager;
+extern std::deque<Message> *main_queue;
 
 
 // Interrupt Descriptor Table
 alignas(16) std::array<InterruptDescriptor, 256> idt;
 
-void SetIDTEntry(int vector_number, 
+void SetIDTEntry(InterruptVector vector_number, 
                  uintptr_t offset, 
                  uint16_t segment_selector, 
                  uint16_t type, 
@@ -23,10 +28,16 @@ void SetIDTEntry(int vector_number,
     idt[vector_number].segment_present_flag = segment_present_flag;
 }
 
-//
+
+// 割り込みが終了したことを伝える関数？
+void NotifyEndOfInterrupt() {
+    volatile auto end_of_interrupt = reinterpret_cast<uint32_t*>(0xfee000b0);
+    *end_of_interrupt = 0;
+}
+
+
 // ０除算の例外のハンドラ（IDT[0]）
 // とりあえずはhltするようにしておく。
-//
 __attribute__((interrupt))
 void DivideErrorHandler(void *frame)
 {
@@ -34,10 +45,8 @@ void DivideErrorHandler(void *frame)
     __asm__("hlt");
 }
 
-//
+
 // ページフォルトの例外ハンドラ（IDT[14]）
-//
-//
 __attribute__((interrupt))
 void PageFaultHandler(void *frame)
 {
@@ -46,19 +55,38 @@ void PageFaultHandler(void *frame)
     __asm__("hlt");
 }
 
+
+// Local APIC Timerの割り込みハンドラ
+__attribute__((interrupt))
+void IntHandlerLAPICTimer(void *frame)
+{
+    // logger->debug("[!-- INTERRUPT --!] Local APIC timer got 0.\n");
+    timer_manager->Tick();
+    NotifyEndOfInterrupt();
+}
+
+
 void SetupInterruptDescriptorTable()
 {
+    logger->info("[+] Setup IDT\n");
     logger->debug("idt: %p\n", &idt);
     const uint16_t cs = GetCS();
 
-    // IDTへゲートを追加してゆく
-    logger->info("Setting IDT[0]\n"); // ０除算例外
-    SetIDTEntry(0, reinterpret_cast<uintptr_t>(DivideErrorHandler), cs, 15);
 
-    logger->info("Setting IDT[14]\n"); // ページフォルト
-    SetIDTEntry(14, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 15);
+    // IDTへゲートを追加してゆく
+    logger->info("Setting IDT[%02xh] kDivideError\n", InterruptVector::kDivideError); // ０除算例外
+    SetIDTEntry(InterruptVector::kDivideError, reinterpret_cast<uintptr_t>(DivideErrorHandler), cs, 15);
+
+    logger->info("Setting IDT[%02xh] kPageFault\n", InterruptVector::kPageFault); // ページフォルト
+    SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 15);
+
+    logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
+    SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14);
 
 
     // idtrレジスタを新しいテーブルのアドレスに書き換える。
     LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+
+    // RFLAGSの割り込み許可フラグをセットし割り込みを受け付ける。
+    __asm__("sti");
 }

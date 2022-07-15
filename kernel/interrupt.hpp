@@ -8,6 +8,16 @@
 #include "asmfunc.h"
 
 
+// 割り込みベクタ番号の列挙体
+enum InterruptVector
+{
+    kDivideError = 0,
+    kPageFault = 14,
+    kLAPICTimer = 0x41,
+};
+
+
+// IDTのエントリ
 struct InterruptDescriptor 
 {
     uint16_t offset_low : 16;
@@ -37,6 +47,7 @@ struct InterruptDescriptor
 
 
 
+// vectorで指定したエントリの設定をする。
 // ＝＝＝＝＝＝＝＝　引数の説明　＝＝＝＝＝＝＝＝
 // offset：　手続きのアドレス
 // segment_selector：　この手続きを実行するセグメントのセレクタ値（csの値を書き込めば良い？）
@@ -44,7 +55,7 @@ struct InterruptDescriptor
 // interrupt_stack_table：　あまり理解していない（とりあえず０で）
 // descriptor_priviledge_level：　このゲートの特権レベル
 // segment_present_flag：　ディスクリプタを有効化するか？（基本１）
-void SetIDTEntry(int vector_number, 
+void SetIDTEntry(InterruptVector vector_number, 
                  uintptr_t offset, 
                  uint16_t segment_selector, 
                  uint16_t type, 

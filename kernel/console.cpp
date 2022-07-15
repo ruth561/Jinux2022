@@ -1,4 +1,6 @@
 #include <cstring>
+#include <new>
+
 #include "console.hpp"
 
 
@@ -58,4 +60,24 @@ void Console::NewLine()
         /*  最後の行を0クリアする。 */
         memset(buffer_[kRows - 1], 0, kColumns + 1);
     }
+}
+
+// 文字列の出力がPutStringにより簡単にできる。
+char console_buf[sizeof(Console)];
+Console *console;
+
+extern PixelWriter *pixel_writer;
+
+void InitializeConsole()
+{
+    // コンソールオブジェクトを生成する。
+    // 背景色と文字色が指定可能。
+    PixelColor fg_color = {0xff, 0xff, 0xff}, bg_color = {0x00, 0x80, 0xff};
+    for (int x = 0; x < pixel_writer->h_resol(); x++) {
+        for (int y = 0; y < pixel_writer->v_resol(); y++) {
+            pixel_writer->Write(x, y, &bg_color);
+        }
+    }
+
+    console = new(console_buf) Console(pixel_writer, &fg_color, &bg_color);
 }

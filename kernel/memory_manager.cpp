@@ -2,10 +2,9 @@
 
 #include "memory_manager.hpp"
 #include "logging.hpp"
-
+void Halt();
+ 
 extern logging::Logger *logger;
-
-
 
 BitmapMemoryManager::BitmapMemoryManager() : 
     alloc_map_{}, range_begin_{FrameID{0}}, range_end_{FrameID{kFrameCount}} {
@@ -77,6 +76,47 @@ void BitmapMemoryManager::SetBit(FrameID frame, bool allocated)
     }
 }
 
+
+char memory_manager_buf[sizeof(BitmapMemoryManager)];
+BitmapMemoryManager* memory_manager;
+
+void InitializeMemoryManager(MemoryMap& memory_map)
+{
+    logging::LoggingLevel log_level = logger->current_level();
+    logger->set_level(logging::kINFO);
+    logger->info("[+] Initialize Memory Manager\n");
+
+    memory_manager = new(memory_manager_buf) BitmapMemoryManager; 
+    uintptr_t available_end = 0;
+    for (
+        uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.mem_map);
+        iter < reinterpret_cast<uintptr_t>(memory_map.mem_map) + memory_map.map_size;
+        iter += memory_map.descriptor_size) {
+        MemoryDescriptor *desc = reinterpret_cast<MemoryDescriptor *>(iter);
+        // メモリマップで歯抜けになっている部分は使用できないので、マークする。
+        if (available_end < desc->physical_start) {
+            memory_manager->MarkAllocated(
+                FrameID{available_end / kBytesPerFrame}, 
+                (desc->physical_start - available_end) / kBytesPerFrame);
+        }
+        // descが指す領域の最後のアドレス（含まれない最初）
+        uintptr_t physical_end = desc->physical_start + desc->number_of_pages * kUEFIPageSize;
+        if (isAvailable(static_cast<MemoryType>(desc->type))) { // 使用していいメモリ領域
+            available_end = physical_end;
+        } else {
+            memory_manager->MarkAllocated(
+                FrameID{desc->physical_start / kBytesPerFrame}, 
+                desc->number_of_pages * kUEFIPageSize / kBytesPerFrame);
+        }
+    }
+    // logger->info("Memory allocate map is at %p\n", memory_manager->BitMapAddress());
+
+    if (InitializeHeap(memory_manager)) { // カーネルで使用するmalloc用のヒープ領域の初期化。
+        logger->error("Failed to allocate heap memory...\n");
+        Halt();
+    }
+    logger->set_level(log_level);
+}
 
 extern "C" caddr_t program_break, program_break_end;
 

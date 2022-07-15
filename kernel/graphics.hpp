@@ -62,3 +62,6 @@ public:
     using PixelWriter::PixelWriter;
     virtual void Write(int x, int y, const PixelColor *c) override;
 };
+
+
+void InitializeGrapfics(FrameBufferConfig frame_buffer_config);

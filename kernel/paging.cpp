@@ -29,6 +29,7 @@ namespace
 void SetupIdentityPageTable()
 {
     /* コメントアウトしているのは設定した値をコンソールに出力するというもの。 */
+    logger->info("[+] Setup Paging Structure\n");
 
     pml4_table[0] = reinterpret_cast<uint64_t>(&pdp_table[0]) | 0x003;
     // logger->debug("pml4_table[0] = %lx\n", pml4_table[0]);
@@ -44,6 +45,8 @@ void SetupIdentityPageTable()
     logger->debug("before set %p to cr3\n", &pml4_table[0]);
     SetCR3(reinterpret_cast<uint64_t>(&pml4_table[0]));
     logger->debug("after set cr3\n");
+
+    // logger->info("[+] Identity paging structure mapped!!\n");
 }
 
 uintptr_t Translate4LevelPaging(uintptr_t linear_address)

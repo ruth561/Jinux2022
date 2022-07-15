@@ -21,6 +21,10 @@ namespace logging
             level_ = level;
         }
 
+        LoggingLevel current_level() {
+            return level_;
+        }
+
         int debug(const char *format, ...);    // levelがDEBUG以上のときのみ出力。
         int info(const char *format, ...);     // levelがINFO以上のときのみ出力。
         int warning(const char *format, ...);  // levelがWARNING以上のときのみ出力。

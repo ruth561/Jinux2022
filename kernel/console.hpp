@@ -36,3 +36,5 @@ private:
     char buffer_[kRows][kColumns + 1];          // kColumns + 1なのは最後のNULL文字のため
     int cursor_row_, cursor_column_;
 };
+
+void InitializeConsole();

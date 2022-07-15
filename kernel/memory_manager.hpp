@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <array>
 
+#include "memory_map.hpp"
+
 namespace
 {
     constexpr unsigned long long operator""_KiB(unsigned long long kib) {
@@ -46,9 +48,6 @@ private:
 // フレームが確保できなかったときなどに使用されるオブジェクト。
 static const FrameID kNullFrame{~static_cast<size_t>(0)};
 
-
-
-
 class BitmapMemoryManager
 {
 public:
@@ -87,6 +86,10 @@ private:
 
 };
 
+
+// UEFIのメモリマップを駆使して、使用可能領域と不可領域を
+// MemoryManagerに反映する。
+void InitializeMemoryManager(MemoryMap& memory_map);
 
 // カーネルで使用するためのヒープ領域を確保し初期化する関数。
 // 初期化に成功すれば0を返す。
