@@ -16,6 +16,7 @@
 #include "interrupt.hpp"
 #include "timer.hpp"
 #include "message.hpp"
+#include "task.hpp"
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -23,6 +24,7 @@ int printk(const char *format, ...);
 extern PixelWriter *pixel_writer;
 extern Console *console;
 extern BitmapMemoryManager* memory_manager;
+TaskManager* task_manager;
 TimerManager *timer_manager; // LAPICタイマーの管理をするもの。
 std::deque<Message> *main_queue; // 割り込み通知を溜めるキュー
 
@@ -33,6 +35,36 @@ logging::Logger *logger;
 
 
 
+void TaskA(uint64_t id, int64_t data)
+{
+    long cnt = 0;
+    while (1) {
+        cnt++;
+        if (cnt % 0x10000000 == 0) {
+            printk("TaskA: %lx\n", cnt);
+        }
+    }
+}
+void TaskB(uint64_t id, int64_t data)
+{
+    long cnt = 0;
+    while (1) {
+        cnt++;
+        if (cnt % 0x20000000 == 0) {
+            printk("               TaskB: %lx\n", cnt);
+        }
+    }
+}
+void TaskC(uint64_t id, int64_t data)
+{
+    long cnt = 0;
+    while (1) {
+        cnt++;
+        if (cnt % 0x40000000 == 0) {
+            printk("                              TaskC: %lx\n", cnt);
+        }
+    }
+}
 
 extern "C" void KernelMainNewStack(
     const FrameBufferConfig *frame_buffer_config_ref, 
@@ -45,12 +77,9 @@ extern "C" void KernelMainNewStack(
     MemoryMap memory_map{*memory_map_ref};
     
     InitializeGrapfics(frame_buffer_config);
-    InitializeConsole();
-
+    InitializeConsole(); // コンソールの初期化
     logger = new(logger_buf) logging::Logger();
     logger->set_level(logging::kDEBUG); // ログレベルの変更・設定
-
-    SetupSegments();
 
     /* uint64_t cr0 = GetCR0();
     uint64_t cr2 = GetCR2();
@@ -60,22 +89,18 @@ extern "C" void KernelMainNewStack(
     logger->debug("CR2: %016lx\n", cr2);
     logger->debug("CR3: %016lx\n", cr3);
     logger->debug("CR4: %016lx\n", cr4); */
-
+    
+    SetupSegments();
     SetupIdentityPageTable(); // ページングの設定
     InitializeMemoryManager(memory_map); // メモリ管理の開始
-
     main_queue = new std::deque<Message>; // 割り込み用キューの生成
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
 
     InitializeLocalAPICTimer(); // タイマの設定
-
-
-
-
-
-    for (int i = 1; i < 25; i++) {
-        timer_manager->AddTimer(Timer(1 << (32 - i), i));
-    }
+    InitializeTask(); // マルチタスクの開始
+    task_manager->NewTask()->InitContext(TaskA, 0xdeadbeef);
+    task_manager->NewTask()->InitContext(TaskB, 0xcafebabe);
+    task_manager->NewTask()->InitContext(TaskC, 0xcafebabe);
 
 
     while (1) {

@@ -63,5 +63,11 @@ void SetIDTEntry(InterruptVector vector_number,
                  uint16_t descriptor_priviledge_level = 0, 
                  uint16_t segment_present_flag = 1);
 
+
+// 割り込みが起きたことを通知する関数。
+// 割り込み処理の最後に必ず必要。
+void NotifyEndOfInterrupt();
+
+
 // idtへの設定をここで行う。
 void SetupInterruptDescriptorTable();

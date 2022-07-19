@@ -10,7 +10,7 @@ extern TimerManager *timer_manager;
 extern std::deque<Message> *main_queue;
 
 
-// Interrupt Descriptor Table
+// 割り込みディスクリプタテーブル
 alignas(16) std::array<InterruptDescriptor, 256> idt;
 
 void SetIDTEntry(InterruptVector vector_number, 
@@ -29,15 +29,18 @@ void SetIDTEntry(InterruptVector vector_number,
 }
 
 
-// 割り込みが終了したことを伝える関数？
+/* 
+ * 割り込みが終了したことを伝える関数 
+ */
 void NotifyEndOfInterrupt() {
     volatile auto end_of_interrupt = reinterpret_cast<uint32_t*>(0xfee000b0);
     *end_of_interrupt = 0;
 }
 
-
-// ０除算の例外のハンドラ（IDT[0]）
-// とりあえずはhltするようにしておく。
+/* 
+ * ０除算の例外のハンドラ（IDT[0]）
+ * とりあえずはhltするようにしておく。 
+ */
 __attribute__((interrupt))
 void DivideErrorHandler(void *frame)
 {
@@ -45,8 +48,9 @@ void DivideErrorHandler(void *frame)
     __asm__("hlt");
 }
 
-
-// ページフォルトの例外ハンドラ（IDT[14]）
+/* 
+ * ページフォルトの例外ハンドラ（IDT[14]） 
+ */
 __attribute__((interrupt))
 void PageFaultHandler(void *frame)
 {
@@ -55,14 +59,13 @@ void PageFaultHandler(void *frame)
     __asm__("hlt");
 }
 
-
-// Local APIC Timerの割り込みハンドラ
+/* 
+ * Local APIC Timerの割り込みハンドラ 
+ */
 __attribute__((interrupt))
 void IntHandlerLAPICTimer(void *frame)
 {
-    // logger->debug("[!-- INTERRUPT --!] Local APIC timer got 0.\n");
-    timer_manager->Tick();
-    NotifyEndOfInterrupt();
+    LAPICTimerOnInterrupt(); // timer.cppで定義
 }
 
 

@@ -14,6 +14,8 @@ extern "C" {
     uint64_t GetCR3();
     uint64_t GetCR4();
 
+    void SwitchContext(void* next_ctx, void* current_ctx);
+    
     // リニアアドレスから8bytesのデータを読み出し返り値にする。
     // ページングの検証のために作成。
     uint64_t ReadFromLinearAddress(void *lin_addr);

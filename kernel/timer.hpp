@@ -21,8 +21,8 @@ union LVTTimerRegister
     } __attribute__((packed)) bits;
 };
 
-
-
+// カーネルで用いるtimer_managerを生成し、
+// カウントを始めさせる。
 void InitializeLocalAPICTimer();
 
 
@@ -81,7 +81,9 @@ public:
     void AddTimer(Timer timer);
 
     // ループした回数をインクリメント。
-    void Tick();
+    // タイムアウトしたタイマの通知をmain_queに入れる。
+    // タスク切り替え用のタイマーがタイムアウトしたらtrueを返す。
+    bool Tick();
 
     // 現在のループ回数を返す。
     uint32_t CurrentTick() { return tick_; }
@@ -96,3 +98,11 @@ private:
     std::priority_queue<Timer> timers_; // タイマーを保管する優先度付きキュー
     std::deque<Message> *msg_queue_; // メッセージを入れているデック（main_queueへのポインタを入れる）
 };
+
+// タスクの切り替えを行うインターバル（チック数）
+const uint32_t kTaskTimerPeriod = 20;
+const int kTaskTimerValue = -11111111; // タスクタイマーを見分ける値（他とかぶらないような値）
+
+
+// タイマーの割り込み時に呼ばれる関数。
+void LAPICTimerOnInterrupt();

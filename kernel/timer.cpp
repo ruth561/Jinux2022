@@ -2,9 +2,11 @@
 #include "timer.hpp"
 #include "logging.hpp"
 #include "message.hpp"
+#include "task.hpp"
 
 extern logging::Logger *logger;
 extern TimerManager *timer_manager;
+extern TaskManager* task_manager;
 extern std::deque<Message> *main_queue;
 
 namespace
@@ -15,16 +17,28 @@ namespace
     volatile uint32_t *kDivideConfigurationRegister = reinterpret_cast<uint32_t *>(0xfee003e0ul);
 }
 
-
-
 void InitializeLocalAPICTimer()
 {
     logger->info("[+] Initialize Local APIC Timer\n");
 
     // タイマーマネージャーの生成
+    // 本来は１サイクルが１msかかるように設定したい。
+    // 今回はとりあえず0x100000にしている。
     timer_manager = new TimerManager(main_queue, 0x100000);
-    timer_manager->Start();
+    timer_manager->Start(); 
 }
+
+void LAPICTimerOnInterrupt()
+{
+    bool task_timer_timeout = timer_manager->Tick();
+    NotifyEndOfInterrupt();
+
+    if (task_timer_timeout) {
+        // タスクの入れ替え処理を行う
+        task_manager->SwitchTask();
+    }
+}
+
 
 
 TimerManager::TimerManager(std::deque<Message> *msg_queue, uint32_t counts_per_loop) : 
@@ -61,14 +75,22 @@ void TimerManager::AddTimer(Timer timer)
     timers_.push(timer);
 }
 
-void TimerManager::Tick()
+bool TimerManager::Tick()
 {
     tick_++;
+    bool task_timer_timeout = false;
     while (1) {
         Timer timer = timers_.top();
         if (timer.Timeout() > tick_)
             break;
         
+        // タスク切り替えに関するタイマの場合
+        if (timer.Value() == kTaskTimerValue) {
+            task_timer_timeout = true; // 返り値をtrueにセットする
+            timers_.pop(); // Tick()は割り込み時に行われるメンバ関数なので、他の割り込みを想定しなくて良い。
+            timers_.push(Timer(tick_ + kTaskTimerPeriod, kTaskTimerValue)); // 次のタイマーをセット
+            continue;
+        }
         // タイムアウト時刻になったタイマーについてのメッセージをキューに挿入する。
         Message msg;
         msg.type = Message::Type::kTimerTimeout;
@@ -78,6 +100,8 @@ void TimerManager::Tick()
 
         timers_.pop();
     }
+
+    return task_timer_timeout;
 }
 
 uint64_t TimerManager::TotalCount()
