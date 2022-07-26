@@ -35,6 +35,12 @@ char logger_buf[sizeof(logging::Logger)]; // ロガー用領域
 logging::Logger *logger;
 
 
+void TaskA(uint64_t id, int64_t data)
+{
+    while (1) {
+        printk("TaskA!!\n");
+    }
+}
 
 extern "C" void KernelMainNewStack(
     const FrameBufferConfig *frame_buffer_config_ref, 
@@ -71,31 +77,25 @@ extern "C" void KernelMainNewStack(
     InitializeLocalAPICTimer(); // タイマの設定
     InitializeTask(); // マルチタスクの開始
 
+    uint64_t task_a_id = task_manager->NewTask()
+        ->InitContext(TaskA, 0xdeadbeef)
+        ->Wakeup()
+        ->ID();
+    logger->debug("TaskA id is %ld\n", task_a_id);
 
-
-    logger->set_level(logging::kINFO); // 文字出力を制限
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xcafebabe);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
-
-
-    // task_manager->NewTask(true)->InitContext(nullptr, 0xcafebabe); 
-
-
-    /* task_manager->NewTask(false)->InitContext(TaskA, 0xdeadbeef);
-    task_manager->NewTask(false)->InitContext(TaskB, 0xcafebabe);
-    task_manager->NewTask(false)->InitContext(TaskC, 0xcafebabe);
-    task_manager->NewTask(true)->InitContext(TaskD, 0xcafebabe);  // UserMode */
+    // logger->set_level(logging::kINFO); // 文字出力を制限
+    // task_manager->NewTask()->InitContext(RunApplication, 0xcafebabe);
 
 
 
+    int cnt = 0;
     while (1) {
+        cnt++;
+        if (cnt % 500 == 0) {
+            task_manager->Sleep(task_a_id);
+        } else if (cnt % 10001 == 0) {
+            task_manager->Wakeup(task_a_id);
+        }
         // main_queueの処理中は割り込みを受け付けないようにする
         __asm__("cli");
         if (main_queue->size() == 0) {

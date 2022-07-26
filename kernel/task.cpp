@@ -1,4 +1,5 @@
 #include <string.h>
+#include <algorithm>
 
 #include "task.hpp"
 #include "asmfunc.h"
@@ -7,6 +8,8 @@
 #include "logging.hpp"
 #include "memory_manager.hpp"
 extern BitmapMemoryManager* memory_manager;
+extern TaskManager* task_manager;
+extern TimerManager *timer_manager;
 extern logging::Logger *logger;
 
 
@@ -37,84 +40,89 @@ Task *Task::InitContext(TaskFunc *f, int64_t data)
     return this;
 }
 
-Task *UserTask::InitContext(TaskFunc *f, int64_t data)
+Task *Task::Sleep()
 {
-    const size_t stack_size = kDefultStackBytes / sizeof(stack_[0]);
-    stack_.resize(stack_size);
-    uint64_t stack_end = reinterpret_cast<uint64_t>(&stack_[stack_size]);
-
-
-    // １フレームだけ割り当てて、そこにプログラムを書いてゆく。
-    void *app_frame = memory_manager->Allocate(1).Frame();
-    logger->debug("Allocate memory for application (%p)\n", app_frame);
-    unsigned char *app_code = reinterpret_cast<unsigned char *>(app_frame);
-    /* 
-     * loop: 
-     *      jmp loop 
-     */
-    app_code[0] = 0xeb;
-    app_code[1] = 0xfe;
-    uint64_t app_entry_point = reinterpret_cast<uint64_t>(app_frame);
-    uint64_t app_rsp = (app_entry_point + kBytesPerFrame) & ~0xflu - 8;
-
-
-    
-
-    memset(&context_, 0, sizeof(context_)); // コンテキストを０で初期化
-    context_.cr3 = GetCR3(); // TODO: タスク個人のテーブルを作る *******************************************************
-    context_.rflags = 0x202; // 割り込みを許可する設定
-    context_.cs = kUserCS | 3;
-    context_.ss = kUserSS | 3;
-    /* context_.cs = kKernelCS;
-    context_.ss = kKernelSS; */
-
-    // １６バイトにアラインメントした後に８を引くことで、
-    // １６バイト境界から８バイトずれたアドレスを指す。
-    context_.rsp = app_rsp; 
-    context_.rip = app_entry_point;
-    context_.rdi = id_;
-    context_.rsi = data;
-
-      // MXCSR のすべての例外をマスクする
-      // TODO: ここよく分からんが後で、、
-    *reinterpret_cast<uint32_t*>(&context_.fxsave_area[24]) = 0x1f80;
+    task_manager->Sleep(this);
     return this;
 }
 
+Task *Task::Wakeup()
+{
+    task_manager->Wakeup(this);
+    return this;
+}
 
 TaskManager::TaskManager()
 {
-    NewTask(false); // OS用のタスク？
+    running_.push_back(NewTask()); // OS用のタスク？
 }
 
-Task *TaskManager::NewTask(bool u_s)
+Task *TaskManager::NewTask()
 {
     latest_id_++;
-    if (u_s) {
-        tasks_.push_back(new UserTask(latest_id_));
-    } else {
-        tasks_.push_back(new KernelTask(latest_id_));
-    }
+    tasks_.push_back(new Task(latest_id_));
     return tasks_.back();
 }
 
-void TaskManager::SwitchTask()
+void TaskManager::SwitchTask(bool current_sleep)
 {
-    size_t next_task_index = current_task_index_ + 1;
-    if (next_task_index >= tasks_.size()) {
-        next_task_index = 0;
+    Task *current_task = running_.front();
+    running_.pop_front();
+    if (!current_sleep) {
+        running_.push_back(current_task);
     }
-
-    Task *current_task = tasks_[current_task_index_];
-    Task *next_task = tasks_[next_task_index];
-    current_task_index_ = next_task_index;
+    Task *next_task = running_.front();
 
     SwitchContext(next_task->Context(), current_task->Context());
 }
 
+void TaskManager::Sleep(Task *task)
+{
+    auto it = std::find(running_.begin(), running_.end(), task);
+    if (it == running_.begin()) { // タスクが現在実行中なら
+        SwitchTask(true);
+        return;
+    }
 
-extern TaskManager* task_manager;
-extern TimerManager *timer_manager;
+    if (it == running_.end()) { // タスクが実行可能状態でないなら
+        return;
+    }
+
+    running_.erase(it); // 実行可能状態リストからタスクを削除
+}
+
+int TaskManager::Sleep(uint64_t id)
+{
+    auto it = std::find_if(tasks_.begin(), tasks_.end(), 
+        [id](const auto& t){ return t->ID() == id; });
+    if (it == tasks_.end()) {
+        return -1;
+    }
+
+    Sleep(*it);
+    return 0;
+}
+
+void TaskManager::Wakeup(Task *task) 
+{
+    auto it = std::find(running_.begin(), running_.end(), task);
+    if (it == running_.end()) { // 現在実行可能状態でないならば
+        running_.push_back(task);
+    }
+}
+
+int TaskManager::Wakeup(uint64_t id) 
+{
+    auto it = std::find_if(tasks_.begin(), tasks_.end(), 
+        [id](const auto& t){ return t->ID() == id; });
+    if (it == tasks_.end()) {
+        return -1;
+    }
+
+    Wakeup(*it);
+    return 0;
+}
+
 
 void InitializeTask()
 {

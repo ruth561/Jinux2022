@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstddef>
+#include <deque>
 
 
 /* 
@@ -42,31 +43,16 @@ public:
     // 現在のコンテキストの構造体へのポインタを返す。
     TaskContext *Context() { return &context_; }
 
+    uint64_t ID() const { return id_; }
+    Task *Sleep();
+    Task *Wakeup();
+
 protected:
     uint64_t id_; // タスク固有の値
     std::vector<uint64_t> stack_; // このタスクが使用するスタック領域。
     alignas(16) TaskContext context_; 
 };
 
-/* 
- * 特権レベル０で実行されるタスク
- */
-class KernelTask : public Task
-{
-public:
-    using Task::Task; // コンストラクタの継承
-};
-
-
-/* 
- * 特権レベル３で実行されるタスク
- */
-class UserTask : public Task
-{
-public:
-    using Task::Task; // コンストラクタの継承
-    Task *InitContext(TaskFunc *f, int64_t data);
-};
 
 /* 
  * Taskクラスをまとめて管理するクラス
@@ -78,17 +64,20 @@ class TaskManager
 public:
     // NewTask()を１回だけ実行する。
     TaskManager();
-    /* 
-     * 新しくタスクを追加
-     * u_s：UserTaskかKernelTaskか。trueのならUserTask。
-     */
-    Task *NewTask(bool u_s);
-    // コンテキストスウィッチング
-    void SwitchTask(); 
+    // 新しくタスクを追加
+    Task *NewTask();
+    // running_の先頭をポップし次の先頭のタスクとコンテキストスウィッチする
+    void SwitchTask(bool current_sleep = false); 
+
+    void Sleep(Task *task);
+    int Sleep(uint64_t id); // 成功したら０、失敗したら−１
+    void Wakeup(Task *task);
+    int Wakeup(uint64_t id); // 成功したら０、失敗したら−１
+
 private:
-    std::vector<Task *> tasks_{};
-    uint64_t latest_id_{0};
-    size_t current_task_index_{0};
+    std::vector<Task *> tasks_{}; // 作成したタスクを全て格納するもの
+    uint64_t latest_id_{0}; // 次に作成するタスクのid
+    std::deque<Task *> running_{}; // 実行可能状態タスクの配列。先頭のタスクが現在実行中。
 };
 
 

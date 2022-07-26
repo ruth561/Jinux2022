@@ -35,7 +35,7 @@ void LAPICTimerOnInterrupt()
 
     if (task_timer_timeout) {
         // タスクの入れ替え処理を行う
-        task_manager->SwitchTask();
+        task_manager->SwitchTask(false);
     }
 }
 
