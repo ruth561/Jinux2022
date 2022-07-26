@@ -27,7 +27,6 @@ extern Console *console;
 extern BitmapMemoryManager* memory_manager;
 TaskManager* task_manager;
 TimerManager *timer_manager; // LAPICタイマーの管理をするもの。
-std::deque<Message> *main_queue; // 割り込み通知を溜めるキュー
 
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024]; // カーネル用スタック領域
@@ -71,39 +70,32 @@ extern "C" void KernelMainNewStack(
     InitializeMemoryManager(memory_map); // メモリ管理の開始
     InitializeTSS(); // TSSをGDTに設定
 
-    main_queue = new std::deque<Message>; // 割り込み用キューの生成
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
-
     InitializeLocalAPICTimer(); // タイマの設定
     InitializeTask(); // マルチタスクの開始
+    Task *main_task = task_manager->CurrentTask();
 
     uint64_t task_a_id = task_manager->NewTask()
         ->InitContext(TaskA, 0xdeadbeef)
         ->Wakeup()
         ->ID();
     logger->debug("TaskA id is %ld\n", task_a_id);
+    timer_manager->AddTimer(Timer(2000, 0xcafebabe));
 
     // logger->set_level(logging::kINFO); // 文字出力を制限
     // task_manager->NewTask()->InitContext(RunApplication, 0xcafebabe);
+    
 
 
-
-    int cnt = 0;
     while (1) {
-        cnt++;
-        if (cnt % 500 == 0) {
-            task_manager->Sleep(task_a_id);
-        } else if (cnt % 10001 == 0) {
-            task_manager->Wakeup(task_a_id);
-        }
         // main_queueの処理中は割り込みを受け付けないようにする
         __asm__("cli");
-        if (main_queue->size() == 0) {
-            __asm__("sti\n\thlt");
+        Message msg = main_task->ReceiveMessage();
+        if (msg.type == Message::Type::kNullMessage) { // メインキューにメッセージが入っていない時
+            main_task->Sleep();
+            __asm__("sti");
             continue;
         }
-        Message msg = main_queue->front();
-        main_queue->pop_front();
         __asm__("sti");
 
         // msgの処理
@@ -111,6 +103,7 @@ extern "C" void KernelMainNewStack(
             case Message::Type::kTimerTimeout:
                 logger->debug("Type: kTimerTimeout, Arg.timeout: %lx, Arg.value: %d\n", 
                     msg.arg.timer.timeout, msg.arg.timer.value);
+                task_manager->Sleep(task_a_id);
                 break;
             default:
                 break;

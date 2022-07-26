@@ -5,6 +5,7 @@
 struct Message
 {
     enum class Type {
+        kNullMessage, 
         kTimerTimeout
     } type;
 
@@ -15,5 +16,4 @@ struct Message
         } timer;
     } arg;
 };
-
 

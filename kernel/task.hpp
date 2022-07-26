@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <deque>
 
+#include "message.hpp"
 
 /* 
  * CPUのレジスタを格納する構造体。
@@ -39,18 +40,21 @@ public:
 
     Task(uint64_t id); 
     // コンテキストを０で初期化した後、関数fの実行に必要なレジスタの初期値を与える。
-    virtual Task *InitContext(TaskFunc *f, int64_t data);
-    // 現在のコンテキストの構造体へのポインタを返す。
-    TaskContext *Context() { return &context_; }
+    Task *InitContext(TaskFunc *f, int64_t data);
+    TaskContext *Context(); // 現在のコンテキストの構造体へのポインタを返す。
 
-    uint64_t ID() const { return id_; }
-    Task *Sleep();
-    Task *Wakeup();
+    uint64_t ID() const; // タスクのidを返す
+    Task *Sleep(); // タスクをスリープする
+    Task *Wakeup(); // タスクを実行可能状態に遷移させる
 
+    void SendMessage(const Message msg); // このタスクの持つメッセージキューにプッシュし、実行可能状態へ遷移
+    Message ReceiveMessage(); // メッセージキューからポップする。何も入っていない場合、kNullMessageタイプのメッセージを返す。
+    
 protected:
     uint64_t id_; // タスク固有の値
     std::vector<uint64_t> stack_; // このタスクが使用するスタック領域。
     alignas(16) TaskContext context_; 
+    std::deque<Message> msgs_;
 };
 
 
@@ -71,8 +75,11 @@ public:
 
     void Sleep(Task *task);
     int Sleep(uint64_t id); // 成功したら０、失敗したら−１
-    void Wakeup(Task *task);
+    void Wakeup(Task *task); // 寝ていたら起こす
     int Wakeup(uint64_t id); // 成功したら０、失敗したら−１
+
+    int SendMessage(uint64_t id, Message msg); // タスクidのメッセージキューにmsgをpushする。成功０、失敗−１
+    Task *CurrentTask(); // 現在実行中のTaskオブジェクトへのポインタを返す
 
 private:
     std::vector<Task *> tasks_{}; // 作成したタスクを全て格納するもの

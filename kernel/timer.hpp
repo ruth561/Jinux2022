@@ -96,7 +96,6 @@ private:
     uint32_t counts_per_loop_; // １ループのカウント数
 
     std::priority_queue<Timer> timers_; // タイマーを保管する優先度付きキュー
-    std::deque<Message> *msg_queue_; // メッセージを入れているデック（main_queueへのポインタを入れる）
 };
 
 // タスクの切り替えを行うインターバル（チック数）

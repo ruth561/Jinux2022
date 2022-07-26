@@ -43,8 +43,7 @@ void LAPICTimerOnInterrupt()
 
 TimerManager::TimerManager(std::deque<Message> *msg_queue, uint32_t counts_per_loop) : 
     tick_{0}, 
-    counts_per_loop_{counts_per_loop}, 
-    msg_queue_{msg_queue}
+    counts_per_loop_{counts_per_loop}
 {
     // 一旦APICタイマを止めておく。
     *kInitialCountRegister = 0;
@@ -96,7 +95,7 @@ bool TimerManager::Tick()
         msg.type = Message::Type::kTimerTimeout;
         msg.arg.timer.timeout = timer.Timeout();
         msg.arg.timer.value = timer.Value();
-        msg_queue_->push_back(msg);
+        task_manager->SendMessage(1, msg); // メインタスクのタイマーはidが１
 
         timers_.pop();
     }

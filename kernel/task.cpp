@@ -12,6 +12,13 @@ extern TaskManager* task_manager;
 extern TimerManager *timer_manager;
 extern logging::Logger *logger;
 
+namespace {
+    // アイドルタスク（ずっと何もせずCPUを休ませてくれるタスク）
+    void IdleTask(uint64_t id, int64_t data)
+    {
+        while (1) __asm__("hlt");
+    }
+}
 
 Task::Task(uint64_t id) : id_{id} {}
 
@@ -40,6 +47,16 @@ Task *Task::InitContext(TaskFunc *f, int64_t data)
     return this;
 }
 
+TaskContext *Task::Context()
+{
+    return &context_;
+}
+
+uint64_t Task::ID() const
+{
+    return id_;
+}
+
 Task *Task::Sleep()
 {
     task_manager->Sleep(this);
@@ -51,6 +68,26 @@ Task *Task::Wakeup()
     task_manager->Wakeup(this);
     return this;
 }
+
+void Task::SendMessage(const Message msg)
+{
+    msgs_.push_back(msg);
+    Wakeup();
+}
+
+Message Task::ReceiveMessage()
+{
+    Message msg;
+    if (msgs_.empty()) {
+        msg.type = Message::Type::kNullMessage;
+    } else {
+        msg = msgs_.front();
+        msgs_.pop_front();
+    }
+
+    return msg;
+}
+
 
 TaskManager::TaskManager()
 {
@@ -66,6 +103,10 @@ Task *TaskManager::NewTask()
 
 void TaskManager::SwitchTask(bool current_sleep)
 {
+    if (running_.empty()) {
+        logger->error("THERE ARE NO TASK!!\n");
+        __asm__("hlt");
+    }
     Task *current_task = running_.front();
     running_.pop_front();
     if (!current_sleep) {
@@ -123,6 +164,22 @@ int TaskManager::Wakeup(uint64_t id)
     return 0;
 }
 
+int TaskManager::SendMessage(uint64_t id, Message msg)
+{
+    auto it = std::find_if(tasks_.begin(), tasks_.end(), 
+        [id](const auto& t){ return t->ID() == id; });
+    if (it == tasks_.end()) { // タスクが存在しない場合
+        return -1;
+    }
+
+    (*it)->SendMessage(msg);
+    return 0;
+}
+
+Task *TaskManager::CurrentTask()
+{
+    return running_.front();
+}
 
 void InitializeTask()
 {
