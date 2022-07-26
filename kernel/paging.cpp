@@ -1,11 +1,15 @@
 #include "paging.hpp"
 #include "logging.hpp"
 #include "asmfunc.h"
+#include "memory_manager.hpp"
+#include "task.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
+extern BitmapMemoryManager* memory_manager;
 extern logging::Logger *logger;
 
 namespace
@@ -22,8 +26,6 @@ namespace
     alignas(4096) std::array<std::array<uint64_t, 512>, kPageDirectoryCount> page_directory;
 
 }
-
-
 
 
 void SetupIdentityPageTable()
@@ -71,7 +73,7 @@ uintptr_t Translate4LevelPaging(uintptr_t linear_address)
     PageMapEntry *pdpt = reinterpret_cast<PageMapEntry *>(pml4[linear.bits.pml4].Pointer());
     if (pdpt[linear.bits.pdpt].isPage()) {  // 1GiBのページの時（Huge Page）
         logger->debug("1GiB page!\n");
-        return pdpt[linear.bits.pdpt].Pointer() + linear.Offset1GiB();
+        return reinterpret_cast<uintptr_t>(pdpt[linear.bits.pdpt].Pointer()) + linear.Offset1GiB();
     }
 
     // PDPTエントリから指されるページディレクトリ
@@ -79,14 +81,14 @@ uintptr_t Translate4LevelPaging(uintptr_t linear_address)
     PageMapEntry *pd = reinterpret_cast<PageMapEntry *>(pdpt[linear.bits.pdpt].Pointer());
     if (pd[linear.bits.directory].isPage()) { // 2MiBのページの時
         logger->debug("2MiB page!\n");
-        return pd[linear.bits.directory].Pointer() + linear.Offset2MiB();
+        return reinterpret_cast<uintptr_t>(pd[linear.bits.directory].Pointer()) + linear.Offset2MiB();
     }
 
     // Page Table
     PageMapEntry *pt = reinterpret_cast<PageMapEntry *>(pd[linear.bits.directory].Pointer());
     if (pt[linear.bits.table].isPage()) { // 4KiBのページの時
         logger->debug("4KiB page!\n");
-        return pt[linear.bits.table].Pointer() + linear.Offset4KiB();
+        return reinterpret_cast<uintptr_t>(pt[linear.bits.table].Pointer()) + linear.Offset4KiB();
     }
 
     return 0;

@@ -9,12 +9,14 @@ extern "C" {
     void SetCSSS(uint16_t cs, uint16_t ss);
     void SetDSAll(uint16_t value);
     void SetCR3(uint64_t value);
+    void LoadTR(uint16_t sel);
     uint64_t GetCR0();
     uint64_t GetCR2();
     uint64_t GetCR3();
     uint64_t GetCR4();
 
     void SwitchContext(void* next_ctx, void* current_ctx);
+    void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
     
     // リニアアドレスから8bytesのデータを読み出し返り値にする。
     // ページングの検証のために作成。

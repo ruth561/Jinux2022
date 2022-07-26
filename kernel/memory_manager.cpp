@@ -19,12 +19,13 @@ void BitmapMemoryManager::SetMemoryRange(FrameID range_begin, FrameID range_end)
 void BitmapMemoryManager::MarkAllocated(FrameID start_frame, size_t num_frames)
 {
     logger->debug("Mark 0x%x frames from %p(ID: %lx)\n", 
-        num_frames, start_frame.Frame(), start_frame.ID());
+       num_frames, start_frame.Frame(), start_frame.ID());
 
     for (size_t i = 0; i < num_frames; i++) {
         SetBit(FrameID{start_frame.ID() + i}, true);
     }
 }
+
 
 FrameID BitmapMemoryManager::Allocate(size_t num_frames)
 {
@@ -136,4 +137,18 @@ int InitializeHeap(BitmapMemoryManager *memory_manager)
     logger->debug("Heap memory is mapped from %p to %p\n", program_break, program_break_end);
     
     return 0;
+}
+
+
+int HandlePageFault(PageFaultErrorCode error_code, uint64_t addr)
+{
+    LinearAddress4Level linear_addr;
+    linear_addr.data = addr;
+
+    if (!error_code.bits.caused_by_page_level_protection) { // ページが存在していないなら
+        if (SetupPageMapForApp(linear_addr, 1)) {
+            return 0;
+        }
+    }
+    return -1;
 }

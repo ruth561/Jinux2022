@@ -4,6 +4,7 @@
 #include "timer.hpp"
 #include "logging.hpp"
 #include "message.hpp"
+#include "memory_manager.hpp"
 
 extern logging::Logger *logger;
 extern TimerManager *timer_manager;
@@ -37,10 +38,7 @@ void NotifyEndOfInterrupt() {
     *end_of_interrupt = 0;
 }
 
-/* 
- * ０除算の例外のハンドラ（IDT[0]）
- * とりあえずはhltするようにしておく。 
- */
+// #DE(00)
 __attribute__((interrupt))
 void DivideErrorHandler(void *frame)
 {
@@ -48,15 +46,64 @@ void DivideErrorHandler(void *frame)
     __asm__("hlt");
 }
 
-/* 
- * ページフォルトの例外ハンドラ（IDT[14]） 
- */
+// #UD(06)
+// 今の所、機能しているかよくわからない、、
 __attribute__((interrupt))
-void PageFaultHandler(void *frame)
+void InvalidOpecodeHandler(void *frame)
+{
+    logger->error("[!-- EXCEPTION --!] INVALID OPCODE EXCEPTION!\n");
+    __asm__("hlt");
+}
+
+// #NP(11)
+__attribute__((interrupt))
+void SegmentNotPresentHandler(InterruptFrame *frame, uint64_t error_code)
+{
+    logger->error("[!-- EXCEPTION --!] SEGMENT NOT PRESENT!\n");
+    __asm__("hlt");
+}
+
+// #GP(13)
+__attribute__((interrupt))
+void GeneralProtectionHandler(InterruptFrame *frame, uint64_t error_code)
+{
+    logger->error("[!-- EXCEPTION --!] GENERAL PROTECTION!\n");
+    logger->error("ERROR_CODE=0x%lx, RIP=0x%lx, CS=0x%lx, RFLAGS=0x%lx, RSP=0x%lx, SS=0x%lx\n",
+        error_code, frame->rip, frame->cs, frame->rflags, frame->rsp, frame->ss);
+    __asm__("sti");
+    while (true) {
+        __asm__("hlt");
+    }
+}
+
+// #PF(14)
+__attribute__((interrupt))
+void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 {
     // CR2にフォルトしたリニアアドレスが渡される
-    logger->error("[!-- EXCEPTION --!] PAGE FAULT at 0x%lx!\n", GetCR2());
-    __asm__("hlt");
+    PageFaultErrorCode error_code;
+    error_code.data = error_code_;
+    uint64_t error_address = GetCR2();
+
+    int res = HandlePageFault(error_code, error_address);
+    if (res == 0) {
+        return;
+    }
+    
+    logger->error("[!-- EXCEPTION --!] PAGE FAULT at 0x%lx!\n", error_address);
+    logger->error("    %s.\n", 
+        error_code.bits.caused_by_page_level_protection ? "PAGE-LEVEL PROTECTION VIOLATION" : "NON-PRESENT PAGE ACCESS");
+    logger->error("    %s %s.\n", 
+        error_code.bits.u_s ? "USER" : "SUPERVISOR",
+        error_code.bits.w_r ? "WRITE" : "READ");
+    
+    if (error_code.bits.rsvd)
+        logger->error("    THE FAULT WAS CAUSED BY A RESERVED BIT SET TO 1 IN SOME PAGING-STRUCURE ENTRY.\n");
+
+    if (error_code.bits.caused_by_instruction_fetch)
+        logger->error("    THE FAULT WAS CAUSED BY AN INSTRUCTION FETCH.\n");
+
+    while (1);
 }
 
 /* 
@@ -76,9 +123,18 @@ void SetupInterruptDescriptorTable()
     const uint16_t cs = GetCS();
 
 
-    // IDTへゲートを追加してゆく
+    // IDTへゲートを追加していく    
     logger->info("Setting IDT[%02xh] kDivideError\n", InterruptVector::kDivideError); // ０除算例外
     SetIDTEntry(InterruptVector::kDivideError, reinterpret_cast<uintptr_t>(DivideErrorHandler), cs, 15);
+
+    logger->info("Setting IDT[%02xh] kInvalidOpecode\n", InterruptVector::kInvalidOpecode); // 無効命令
+    SetIDTEntry(InterruptVector::kInvalidOpecode, reinterpret_cast<uintptr_t>(InvalidOpecodeHandler), cs, 15);
+
+    logger->info("Setting IDT[%02xh] kSegmentNotPresent\n", InterruptVector::kSegmentNotPresent); // セグメントの不在
+    SetIDTEntry(InterruptVector::kSegmentNotPresent, reinterpret_cast<uintptr_t>(SegmentNotPresentHandler), cs, 15);
+
+    logger->info("Setting IDT[%02xh] kGeneralProtection\n", InterruptVector::kGeneralProtection); // 一般保護例外
+    SetIDTEntry(InterruptVector::kGeneralProtection, reinterpret_cast<uintptr_t>(GeneralProtectionHandler), cs, 15);
 
     logger->info("Setting IDT[%02xh] kPageFault\n", InterruptVector::kPageFault); // ページフォルト
     SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 15);

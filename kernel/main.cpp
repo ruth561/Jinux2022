@@ -17,6 +17,7 @@
 #include "timer.hpp"
 #include "message.hpp"
 #include "task.hpp"
+#include "run_application.hpp"
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -34,37 +35,6 @@ char logger_buf[sizeof(logging::Logger)]; // ロガー用領域
 logging::Logger *logger;
 
 
-
-void TaskA(uint64_t id, int64_t data)
-{
-    long cnt = 0;
-    while (1) {
-        cnt++;
-        if (cnt % 0x10000000 == 0) {
-            printk("TaskA: %lx\n", cnt);
-        }
-    }
-}
-void TaskB(uint64_t id, int64_t data)
-{
-    long cnt = 0;
-    while (1) {
-        cnt++;
-        if (cnt % 0x20000000 == 0) {
-            printk("               TaskB: %lx\n", cnt);
-        }
-    }
-}
-void TaskC(uint64_t id, int64_t data)
-{
-    long cnt = 0;
-    while (1) {
-        cnt++;
-        if (cnt % 0x40000000 == 0) {
-            printk("                              TaskC: %lx\n", cnt);
-        }
-    }
-}
 
 extern "C" void KernelMainNewStack(
     const FrameBufferConfig *frame_buffer_config_ref, 
@@ -90,17 +60,39 @@ extern "C" void KernelMainNewStack(
     logger->debug("CR3: %016lx\n", cr3);
     logger->debug("CR4: %016lx\n", cr4); */
     
-    SetupSegments();
+    SetupSegments(); // UEFIの設定を更新し直す
     SetupIdentityPageTable(); // ページングの設定
     InitializeMemoryManager(memory_map); // メモリ管理の開始
+    InitializeTSS(); // TSSをGDTに設定
+
     main_queue = new std::deque<Message>; // 割り込み用キューの生成
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
 
     InitializeLocalAPICTimer(); // タイマの設定
     InitializeTask(); // マルチタスクの開始
-    task_manager->NewTask()->InitContext(TaskA, 0xdeadbeef);
-    task_manager->NewTask()->InitContext(TaskB, 0xcafebabe);
-    task_manager->NewTask()->InitContext(TaskC, 0xcafebabe);
+
+
+
+    logger->set_level(logging::kINFO); // 文字出力を制限
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xcafebabe);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(RunApplication, 0xdeadbeef);
+
+
+    // task_manager->NewTask(true)->InitContext(nullptr, 0xcafebabe); 
+
+
+    /* task_manager->NewTask(false)->InitContext(TaskA, 0xdeadbeef);
+    task_manager->NewTask(false)->InitContext(TaskB, 0xcafebabe);
+    task_manager->NewTask(false)->InitContext(TaskC, 0xcafebabe);
+    task_manager->NewTask(true)->InitContext(TaskD, 0xcafebabe);  // UserMode */
+
 
 
     while (1) {

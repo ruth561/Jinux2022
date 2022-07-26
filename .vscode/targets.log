@@ -1,6 +1,4 @@
 make all --print-data-base --no-builtin-variables --no-builtin-rules --question
-make: *** No rule to make target 'all'.  Stop.
-
 # GNU Make 4.2.1
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2016 Free Software Foundation, Inc.
@@ -8,7 +6,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Jul 19 17:51:06 2022
+# Make data base, printed on Mon Jul 25 20:07:23 2022
 
 # Variables
 
@@ -49,7 +47,7 @@ VSCODE_NLS_CONFIG = {"locale":"ja","availableLanguages":{"*":"ja"},"_languagePac
 # environment
 _ = /usr/share/code/code
 # environment
-JOURNAL_STREAM = 8:51535
+JOURNAL_STREAM = 8:47608
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -67,7 +65,7 @@ DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-MANAGERPID = 1639
+MANAGERPID = 1567
 # environment
 CLUTTER_IM_MODULE = fcitx
 # environment
@@ -81,7 +79,7 @@ PATH = /home/ruth/.local/bin:/opt/java/jdk-11.0.2/bin:/home/ruth/.local/bin:/usr
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1866,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1866
+SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1790,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1790
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -91,7 +89,7 @@ VSCODE_LOG_STACK = false
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = b1550f1e35d94da3941423560a3b0c36
+INVOCATION_ID = fb995ca61d534a23bfd41fdb6af7595e
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -101,7 +99,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 2226
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2585
 # automatic
 %F = $(notdir $%)
 # environment
@@ -115,7 +113,7 @@ PWD = /home/ruth/Documents/Jinux2022
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1814
+SSH_AGENT_PID = 1738
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -151,7 +149,7 @@ SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-a63fb208-9b91-42f8-b79f-54feb24255c3.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-7d9a261b-3da5-4f83-84df-ece61cb7f964.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -213,7 +211,7 @@ GJS_DEBUG_OUTPUT = stderr
 # environment
 LANG = C
 # environment
-VSCODE_PID = 2226
+VSCODE_PID = 2585
 # variable set hash-table stats:
 # Load=101/1024=10%, Rehash=0, Collisions=13/123=11%
 
@@ -223,9 +221,9 @@ VSCODE_PID = 2226
 
 # Directories
 
-# . (device 66306, inode 18743501): 12 files, no impossibilities.
+# . (device 66306, inode 18743501): 14 files, no impossibilities.
 
-# 12 files, no impossibilities in 1 directories.
+# 14 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -275,13 +273,14 @@ GNUmakefile:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 20 / storage = 177 B / avg = 8 B
-# current buf: size = 8162 B / used = 177 B / count = 20 / avg = 8 B
+# strcache buffers: 1 (0) / strings = 22 / storage = 191 B / avg = 8 B
+# current buf: size = 8162 B / used = 191 B / count = 22 / avg = 8 B
 
-# strcache performance: lookups = 23 / hit rate = 13%
+# strcache performance: lookups = 25 / hit rate = 12%
 # hash-table stats:
- 
-# Load=20/8192=0%, Rehash=0, Collisions=1/23=4%
-# Finished Make data base on Tue Jul 19 17:51:06 2022
+# Load=22/8192=0%, Rehash=0, Collisions=1/25=4%
+# Finished Make data base on Mon Jul 25 20:07:23 2022
 
  
+make: *** No rule to make target 'all'.  Stop.
+

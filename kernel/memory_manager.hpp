@@ -5,6 +5,7 @@
 #include <array>
 
 #include "memory_map.hpp"
+#include "run_application.hpp"
 
 namespace
 {
@@ -97,3 +98,33 @@ void InitializeMemoryManager(MemoryMap& memory_map);
 // 実行成功後、NewLibのmallocが使用可能になる。
 int InitializeHeap(BitmapMemoryManager *memory_manager);
 
+
+/* 
+ * Page Faultが起きた時に使う構造体や関数
+ * 
+ */
+
+// ページフォルト時に渡されるエラーコードの構造体
+union PageFaultErrorCode
+{
+    uint64_t data;
+    struct {
+        uint32_t caused_by_page_level_protection: 1; // ０：ページが存在していない　１：存在しているが保護されている
+        uint32_t w_r: 1; // １：書き込み時の例外　０：読み込み時の例外
+        uint32_t u_s: 1; // １：User-modeでのアクセス　０：Suoervisor-modeでのアクセス
+        uint32_t rsvd: 1; // １：reserved領域に１が書き込まれていたことによる例外
+        uint32_t caused_by_instruction_fetch: 1; // １：フェッチ時の例外
+        uint32_t protection_key_violation: 1; 
+        uint32_t caused_by_shadowstack_access: 1;
+        uint32_t hlat_paging: 1;
+        uint32_t : 7;
+        uint32_t sgx: 1;
+        uint32_t : 16;
+        uint32_t : 32;
+    } bits;
+};
+
+// ページフォルトハンドラから呼び出される関数
+// デマンドページングが成功したら０を返す。
+// 失敗したら１を返す。
+int HandlePageFault(PageFaultErrorCode error_code, uint64_t linear_addr);

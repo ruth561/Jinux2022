@@ -46,8 +46,11 @@ union PageMapEntry
     bool isPage() const {   // このエントリがページを指し示していればtrueを返す。
         return bits.page_size == 1;
     }
-    uintptr_t Pointer() const { // アドレスを返す
-        return reinterpret_cast<uintptr_t>(bits.addr << 12);
+    void *Pointer() const { // アドレスを返す
+        return reinterpret_cast<void *>(bits.addr << 12);
+    }
+    void SetPointer(void *address) {
+        bits.addr = reinterpret_cast<uint64_t>(address) >> 12;
     }
 };
 

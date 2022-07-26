@@ -68,6 +68,11 @@ SetDSAll:
     mov gs, di
     ret
 
+global LoadTR
+LoadTR:  ; void LoadTR(uint16_t sel);
+    ltr di
+    ret
+
 global SetCR3   ; void SetCR3(uint64_t value);
 SetCR3:
     mov cr3, rdi
@@ -182,4 +187,18 @@ SwitchContext:  ; void SwitchContext(void* next_ctx, void* current_ctx);
 
     mov rdi, [rdi + 0x60]
 
-    o64 iret
+    o64 iret 
+
+
+
+global CallApp
+CallApp: ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+    push rbp
+    mov rbp, rsp
+    push rcx  ; SS
+    push r9   ; RSP
+    push rdx  ; CS
+    push r8   ; RIP
+    o64 retf
+
+

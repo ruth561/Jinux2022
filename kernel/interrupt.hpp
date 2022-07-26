@@ -12,6 +12,9 @@
 enum InterruptVector
 {
     kDivideError = 0,
+    kInvalidOpecode = 6, 
+    kSegmentNotPresent = 11,
+    kGeneralProtection = 13, 
     kPageFault = 14,
     kLAPICTimer = 0x41,
 };
@@ -46,6 +49,16 @@ struct InterruptDescriptor
 } __attribute__((packed));
 
 
+// 割り込みハンドラ内でrspが指す構造体
+// （割り込みハンドラの第一引数に渡されるポインタが指す構造体）
+struct InterruptFrame
+{
+    uint64_t rip;
+    uint64_t cs;
+    uint64_t rflags;
+    uint64_t rsp;
+    uint64_t ss;
+};
 
 // vectorで指定したエントリの設定をする。
 // ＝＝＝＝＝＝＝＝　引数の説明　＝＝＝＝＝＝＝＝

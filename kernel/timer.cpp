@@ -84,7 +84,7 @@ bool TimerManager::Tick()
         if (timer.Timeout() > tick_)
             break;
         
-        // タスク切り替えに関するタイマの場合
+        // タスク切り替えに関するタイマーの場合
         if (timer.Value() == kTaskTimerValue) {
             task_timer_timeout = true; // 返り値をtrueにセットする
             timers_.pop(); // Tick()は割り込み時に行われるメンバ関数なので、他の割り込みを想定しなくて良い。
