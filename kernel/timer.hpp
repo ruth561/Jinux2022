@@ -3,6 +3,7 @@
 
 #include "interrupt.hpp"
 #include "message.hpp"
+#include "task.hpp"
 
 // lvt timer registerのレイアウト
 // 書き込みは32bitで一気にする必要がある。
@@ -104,4 +105,5 @@ const int kTaskTimerValue = -11111111; // タスクタイマーを見分ける�
 
 
 // タイマーの割り込み時に呼ばれる関数。
-void LAPICTimerOnInterrupt();
+// 
+extern "C" void LAPICTimerOnInterrupt(const TaskContext *ctx_stack);

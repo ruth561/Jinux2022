@@ -130,7 +130,18 @@ Task *TaskManager::NewTask()
     return tasks_.back();
 }
 
-void TaskManager::SwitchTask(bool current_sleep)
+void TaskManager::SwitchTask(const TaskContext *current_ctx)
+{
+    TaskContext *current_task_ctx = task_manager->CurrentTask()->Context();
+    memcpy(current_task_ctx, current_ctx, sizeof(TaskContext));
+
+    Task *current_task = RotateCurrentRunQueue(false);
+    if (CurrentTask() != current_task) { // 次に実行すべきタスクが変更している場合
+        RestoreContext(CurrentTask()->Context());
+    }
+}
+
+Task *TaskManager::RotateCurrentRunQueue(bool current_sleep)
 {
     Task *current_task = running_[current_level_].front();
     running_[current_level_].pop_front();
@@ -145,9 +156,8 @@ void TaskManager::SwitchTask(bool current_sleep)
             break;
         }
     }
-    Task *next_task = running_[current_level_].front();
 
-    SwitchContext(next_task->Context(), current_task->Context());
+    return current_task;
 }
 
 void TaskManager::Sleep(Task *task)
@@ -158,7 +168,8 @@ void TaskManager::Sleep(Task *task)
     task->SetRunning(false);
 
     if (task == running_[current_level_].front()) { // タスクが現在実行中なら
-        SwitchTask(true);
+        Task* current_task = RotateCurrentRunQueue(true);
+        SwitchContext(CurrentTask()->Context(), current_task->Context());
         return;
     }
 

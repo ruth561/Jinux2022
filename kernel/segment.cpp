@@ -10,6 +10,11 @@ namespace {
     TaskStateSegment tss;
 }
 
+void DebugFunc()
+{
+    logger->debug("TSS.RSP0 = 0x%lx\n", tss.rsp0);
+}
+
 
 // 引数で指定したとおりにディスクリプタの値を書き込む。
 void SetCodeSegment(SegmentDescriptor *desc,

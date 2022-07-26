@@ -5,6 +5,9 @@
 
 #include "x86_descriptor.hpp"
 
+// デバッグ用に作った関数
+// あとで消していいやつ
+void DebugFunc();
 
 union SegmentDescriptor {
     uint64_t data;

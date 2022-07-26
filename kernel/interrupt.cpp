@@ -9,6 +9,7 @@
 extern logging::Logger *logger;
 extern TimerManager *timer_manager;
 extern std::deque<Message> *main_queue;
+extern TaskManager* task_manager;
 
 
 // 割り込みディスクリプタテーブル
@@ -51,7 +52,9 @@ void DivideErrorHandler(void *frame)
 __attribute__((interrupt))
 void InvalidOpecodeHandler(void *frame)
 {
-    logger->error("[!-- EXCEPTION --!] INVALID OPCODE EXCEPTION!\n");
+    logger->error("[!-- EXCEPTION --!] INVALID OPCODE EXCEPTION! PROCESS %ld\n", 
+        task_manager->CurrentTask()->ID());
+
     __asm__("hlt");
 }
 
@@ -80,6 +83,8 @@ void GeneralProtectionHandler(InterruptFrame *frame, uint64_t error_code)
 __attribute__((interrupt))
 void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 {
+    // DebugFunc();
+    // __asm__("cli");
     // CR2にフォルトしたリニアアドレスが渡される
     PageFaultErrorCode error_code;
     error_code.data = error_code_;
@@ -87,6 +92,7 @@ void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 
     int res = HandlePageFault(error_code, error_address);
     if (res == 0) {
+        // __asm__("sti");
         return;
     }
     
@@ -103,16 +109,8 @@ void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
     if (error_code.bits.caused_by_instruction_fetch)
         logger->error("    THE FAULT WAS CAUSED BY AN INSTRUCTION FETCH.\n");
 
+    // __asm__("sti");
     while (1);
-}
-
-/* 
- * Local APIC Timerの割り込みハンドラ 
- */
-__attribute__((interrupt))
-void IntHandlerLAPICTimer(void *frame)
-{
-    LAPICTimerOnInterrupt(); // timer.cppで定義
 }
 
 
@@ -125,19 +123,19 @@ void SetupInterruptDescriptorTable()
 
     // IDTへゲートを追加していく    
     logger->info("Setting IDT[%02xh] kDivideError\n", InterruptVector::kDivideError); // ０除算例外
-    SetIDTEntry(InterruptVector::kDivideError, reinterpret_cast<uintptr_t>(DivideErrorHandler), cs, 15);
+    SetIDTEntry(InterruptVector::kDivideError, reinterpret_cast<uintptr_t>(DivideErrorHandler), cs, 14);
 
     logger->info("Setting IDT[%02xh] kInvalidOpecode\n", InterruptVector::kInvalidOpecode); // 無効命令
-    SetIDTEntry(InterruptVector::kInvalidOpecode, reinterpret_cast<uintptr_t>(InvalidOpecodeHandler), cs, 15);
+    SetIDTEntry(InterruptVector::kInvalidOpecode, reinterpret_cast<uintptr_t>(InvalidOpecodeHandler), cs, 14);
 
     logger->info("Setting IDT[%02xh] kSegmentNotPresent\n", InterruptVector::kSegmentNotPresent); // セグメントの不在
-    SetIDTEntry(InterruptVector::kSegmentNotPresent, reinterpret_cast<uintptr_t>(SegmentNotPresentHandler), cs, 15);
+    SetIDTEntry(InterruptVector::kSegmentNotPresent, reinterpret_cast<uintptr_t>(SegmentNotPresentHandler), cs, 14);
 
     logger->info("Setting IDT[%02xh] kGeneralProtection\n", InterruptVector::kGeneralProtection); // 一般保護例外
-    SetIDTEntry(InterruptVector::kGeneralProtection, reinterpret_cast<uintptr_t>(GeneralProtectionHandler), cs, 15);
+    SetIDTEntry(InterruptVector::kGeneralProtection, reinterpret_cast<uintptr_t>(GeneralProtectionHandler), cs, 14);
 
     logger->info("Setting IDT[%02xh] kPageFault\n", InterruptVector::kPageFault); // ページフォルト
-    SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 15);
+    SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。
 
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
     SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14);

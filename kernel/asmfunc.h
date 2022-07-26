@@ -16,6 +16,10 @@ extern "C" {
     uint64_t GetCR4();
 
     void SwitchContext(void* next_ctx, void* current_ctx);
+    // 現在のコンテキストは保存せずに、指定したタスクのコンテキストの復帰のみ行う関数。
+    void RestoreContext(void* task_context);
+    // LAPICタイマーの割り込み時に呼ばれる関数
+    void IntHandlerLAPICTimer();
     void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
     
     // リニアアドレスから8bytesのデータを読み出し返り値にする。

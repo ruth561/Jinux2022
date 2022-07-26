@@ -189,6 +189,108 @@ SwitchContext:  ; void SwitchContext(void* next_ctx, void* current_ctx);
 
     o64 iret 
 
+global RestoreContext
+RestoreContext:  ; void RestoreContext(void* task_context);
+    ; iret 用のスタックフレーム
+    push qword [rdi + 0x28] ; SS
+    push qword [rdi + 0x70] ; RSP
+    push qword [rdi + 0x10] ; RFLAGS
+    push qword [rdi + 0x20] ; CS
+    push qword [rdi + 0x08] ; RIP
+
+    ; コンテキストの復帰
+    fxrstor [rdi + 0xc0]
+
+    mov rax, [rdi + 0x00]
+    mov cr3, rax
+    mov rax, [rdi + 0x30]
+    mov fs, ax
+    mov rax, [rdi + 0x38]
+    mov gs, ax
+
+    mov rax, [rdi + 0x40]
+    mov rbx, [rdi + 0x48]
+    mov rcx, [rdi + 0x50]
+    mov rdx, [rdi + 0x58]
+    mov rsi, [rdi + 0x68]
+    mov rbp, [rdi + 0x78]
+    mov r8,  [rdi + 0x80]
+    mov r9,  [rdi + 0x88]
+    mov r10, [rdi + 0x90]
+    mov r11, [rdi + 0x98]
+    mov r12, [rdi + 0xa0]
+    mov r13, [rdi + 0xa8]
+    mov r14, [rdi + 0xb0]
+    mov r15, [rdi + 0xb8]
+
+    mov rdi, [rdi + 0x60]
+
+    o64 iret
+
+extern LAPICTimerOnInterrupt
+; void LAPICTimerOnInterrupt(const TaskContext *ctx_stack);
+
+global IntHandlerLAPICTimer
+IntHandlerLAPICTimer:  ; void IntHandlerLAPICTimer();
+    push rbp
+    mov rbp, rsp
+
+    sub rsp, 512
+    fxsave [rsp]
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push qword [rbp]         ; RBP
+    push qword [rbp + 0x20]  ; RSP
+    push rsi
+    push rdi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+
+    mov ax, fs
+    mov bx, gs
+    mov rcx, cr3
+
+    push rbx                 ; GS
+    push rax                 ; FS
+    push qword [rbp + 0x28]  ; SS
+    push qword [rbp + 0x10]  ; CS
+    push rbp                 ; reserved1
+    push qword [rbp + 0x18]  ; RFLAGS
+    push qword [rbp + 0x08]  ; RIP
+    push rcx                 ; CR3
+
+    mov rdi, rsp
+    call LAPICTimerOnInterrupt
+
+    add rsp, 8*8  ; CR3 から GS までを無視
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
+    pop rdi
+    pop rsi
+    add rsp, 16   ; RSP, RBP を無視
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+    fxrstor [rsp]
+
+    mov rsp, rbp
+    pop rbp
+    iretq
 
 
 global CallApp

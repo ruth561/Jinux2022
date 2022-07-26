@@ -28,18 +28,18 @@ void InitializeLocalAPICTimer()
     timer_manager->Start(); 
 }
 
-void LAPICTimerOnInterrupt()
+extern "C" void LAPICTimerOnInterrupt(const TaskContext *ctx_stack)
 {
     bool task_timer_timeout = timer_manager->Tick();
     NotifyEndOfInterrupt();
 
     if (task_timer_timeout) {
         // タスクの入れ替え処理を行う
-        task_manager->SwitchTask(false);
+        task_manager->SwitchTask(ctx_stack);
     }
 }
 
-
+ 
 
 TimerManager::TimerManager(std::deque<Message> *msg_queue, uint32_t counts_per_loop) : 
     tick_{0}, 

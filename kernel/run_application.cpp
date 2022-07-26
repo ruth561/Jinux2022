@@ -43,7 +43,7 @@ uint64_t app_rsp = 0xffffc00000000000lu;
 
 // OS用のタスクとして呼び出されることを想定
 // 内部で独自のPML4を作成するなどした後、CallAppでアプリケーションを呼び出す。
-void RunApplication(uint64_t a, int64_t b)
+void RunApplication(uint64_t a, int64_t data)
 {
     SetupPML4();
     /* LinearAddress4Level linear_address;
@@ -53,7 +53,7 @@ void RunApplication(uint64_t a, int64_t b)
     memcpy((void *) app_base_addr, &app[0], sizeof(app));
 
 
-    CallApp(0, nullptr, kUserCS | 3, kUserSS | 3, app_base_addr, app_rsp); 
+    CallApp(0, reinterpret_cast<char **>(data), kUserCS | 3, kUserSS | 3, app_base_addr, app_rsp); 
     while (1);
 }
 

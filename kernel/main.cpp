@@ -59,10 +59,27 @@ extern "C" void KernelMainNewStack(
     InitializeTask(); // マルチタスクの開始
     Task *main_task = task_manager->CurrentTask();
 
+
     // logger->set_level(logging::kINFO); // 文字出力を制限
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xefefefef)
+        ->Wakeup();
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xdeadbeef)
+        ->Wakeup();
     task_manager->NewTask()
         ->InitContext(RunApplication, 0xcafebabe)
         ->Wakeup();
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xcafebabe)
+        ->Wakeup();
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xcafebabe)
+        ->Wakeup();
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xcafebabe)
+        ->Wakeup();
+
 
     while (1) {
         // main_queueの処理中は割り込みを受け付けないようにする

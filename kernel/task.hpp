@@ -48,8 +48,8 @@ public:
     Task *Sleep(); // タスクをスリープする
     Task *Wakeup(int level = -1); // タスクを実行可能状態に遷移させる。優先度をlevelで指定できる。level<0の時、優先度は変えない。
 
-    int Level() { return level_; }
-    bool Running() { return running_; }
+    int Level() { return level_; } // このタスクの優先度
+    bool Running() { return running_; } // 実行可能常態か？
     Task *SetLevel(int level);
     Task *SetRunning(bool running);
 
@@ -78,7 +78,10 @@ public:
 
     TaskManager(); // NewTask()を１回だけ実行する。
     Task *NewTask(); // 新しくタスクを追加（コンテキストの設定や実行可能状態への遷移は行わない）
-    void SwitchTask(bool current_sleep = false); // running_の先頭をポップし次の先頭のタスクとコンテキストスウィッチする
+    void SwitchTask(const TaskContext *current_ctx); // current_ctxを現在のタスクのコンテキストへ格納し、別の処理に制御を移す
+    // 引数にtrueを渡せば現在実行中のタスクをスリープさせる。
+    // 現在のcurrent_level_を必要があれば変更する。返り値は変更前の実行タスク。
+    Task *RotateCurrentRunQueue(bool current_sleep); 
 
     void Sleep(Task *task);
     int Sleep(uint64_t id); // 成功したら０、失敗したら−１
