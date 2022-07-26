@@ -19,6 +19,8 @@ enum InterruptVector
     kLAPICTimer = 0x41,
 };
 
+// 各割り込みが用いるISTの値を定義
+const int kISTForTimer = 1; 
 
 // IDTのエントリ
 struct InterruptDescriptor 

@@ -138,7 +138,7 @@ void SetupInterruptDescriptorTable()
     SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。
 
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
-    SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14);
+    SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14, kISTForTimer);
 
 
     // idtrレジスタを新しいテーブルのアドレスに書き換える。

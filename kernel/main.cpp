@@ -65,21 +65,15 @@ extern "C" void KernelMainNewStack(
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
     task_manager->NewTask()
-        ->InitContext(RunApplication, 0xdeadbeef)
+        ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
     task_manager->NewTask()
-        ->InitContext(RunApplication, 0xcafebabe)
+        ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
     task_manager->NewTask()
-        ->InitContext(RunApplication, 0xcafebabe)
+        ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
-    task_manager->NewTask()
-        ->InitContext(RunApplication, 0xcafebabe)
-        ->Wakeup();
-    task_manager->NewTask()
-        ->InitContext(RunApplication, 0xcafebabe)
-        ->Wakeup();
-
+ 
 
     while (1) {
         // main_queueの処理中は割り込みを受け付けないようにする

@@ -10,11 +10,6 @@ namespace {
     TaskStateSegment tss;
 }
 
-void DebugFunc()
-{
-    logger->debug("TSS.RSP0 = 0x%lx\n", tss.rsp0);
-}
-
 
 // 引数で指定したとおりにディスクリプタの値を書き込む。
 void SetCodeSegment(SegmentDescriptor *desc,
@@ -83,11 +78,16 @@ void InitializeTSS()
     const int kRing0Frames = 8;  // ring0のスタック領域のサイズ（フレーム）
     uint64_t ring0_stack_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(kRing0Frames).Frame());
     uint64_t ring0_stack_end = ring0_stack_begin + kRing0Frames * kBytesPerFrame;
-    logger->debug("RSP0 stack: 0x%lx ~ 0x%lx\n", ring0_stack_begin, ring0_stack_end);
+    logger->debug("Ring0 stack: 0x%lx ~ 0x%lx\n", ring0_stack_begin, ring0_stack_end);
     
-    // TSSのrsp0に値を指定する。
-    tss.rsp0 = ring0_stack_end;
+    uint64_t ist1_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(8).Frame());
+    uint64_t ist1_end = ist1_begin + 8 * kBytesPerFrame;
+    logger->debug("IST1 : 0x%lx ~ 0x%lx\n", ist1_begin, ist1_end);
 
+    // TSSに値を指定する。
+    tss.rsp0 = ring0_stack_end;
+    tss.ist1 = ist1_end;
+    
     // GDTへの設定
     uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss);
     SetSystemSegment(&gdt[kTSS >> 3], DescriptorType::kTSSAvailable, 0, 
