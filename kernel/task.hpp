@@ -37,6 +37,7 @@ class Task
 {
 public:
     static const size_t kDefultStackBytes = 4096;
+    static const uint64_t kDefaultLevel = 1; // タスクの優先度レベルのデフォルト値
 
     Task(uint64_t id); 
     // コンテキストを０で初期化した後、関数fの実行に必要なレジスタの初期値を与える。
@@ -45,16 +46,23 @@ public:
 
     uint64_t ID() const; // タスクのidを返す
     Task *Sleep(); // タスクをスリープする
-    Task *Wakeup(); // タスクを実行可能状態に遷移させる
+    Task *Wakeup(int level = -1); // タスクを実行可能状態に遷移させる。優先度をlevelで指定できる。level<0の時、優先度は変えない。
+
+    int Level() { return level_; }
+    bool Running() { return running_; }
+    Task *SetLevel(int level);
+    Task *SetRunning(bool running);
 
     void SendMessage(const Message msg); // このタスクの持つメッセージキューにプッシュし、実行可能状態へ遷移
     Message ReceiveMessage(); // メッセージキューからポップする。何も入っていない場合、kNullMessageタイプのメッセージを返す。
     
-protected:
+private:
     uint64_t id_; // タスク固有の値
     std::vector<uint64_t> stack_; // このタスクが使用するスタック領域。
     alignas(16) TaskContext context_; 
     std::deque<Message> msgs_;
+    int level_{kDefaultLevel}; // 実行優先度レベル
+    bool running_{false}; // 実行状態・実行可能状態の時にtrueになる
 };
 
 
@@ -66,17 +74,16 @@ protected:
 class TaskManager
 {
 public:
-    // NewTask()を１回だけ実行する。
-    TaskManager();
-    // 新しくタスクを追加
-    Task *NewTask();
-    // running_の先頭をポップし次の先頭のタスクとコンテキストスウィッチする
-    void SwitchTask(bool current_sleep = false); 
+    static const int kMaxLevel = 3; // 実行優先度の幅
+
+    TaskManager(); // NewTask()を１回だけ実行する。
+    Task *NewTask(); // 新しくタスクを追加（コンテキストの設定や実行可能状態への遷移は行わない）
+    void SwitchTask(bool current_sleep = false); // running_の先頭をポップし次の先頭のタスクとコンテキストスウィッチする
 
     void Sleep(Task *task);
     int Sleep(uint64_t id); // 成功したら０、失敗したら−１
-    void Wakeup(Task *task); // 寝ていたら起こす
-    int Wakeup(uint64_t id); // 成功したら０、失敗したら−１
+    void Wakeup(Task *task, int level = -1); // 寝ていたら起こす。levelで実行優先度を変更できる。変更したくない場合はlevel<0とする
+    int Wakeup(uint64_t id, int level = -1); // 成功したら０、失敗したら−１
 
     int SendMessage(uint64_t id, Message msg); // タスクidのメッセージキューにmsgをpushする。成功０、失敗−１
     Task *CurrentTask(); // 現在実行中のTaskオブジェクトへのポインタを返す
@@ -84,7 +91,10 @@ public:
 private:
     std::vector<Task *> tasks_{}; // 作成したタスクを全て格納するもの
     uint64_t latest_id_{0}; // 次に作成するタスクのid
-    std::deque<Task *> running_{}; // 実行可能状態タスクの配列。先頭のタスクが現在実行中。
+    std::array<std::deque<Task *>, kMaxLevel + 1> running_{}; // 実行可能状態タスクの配列。先頭のタスクが現在実行中。
+    int current_level_{kMaxLevel}; // running_に入っているタスクの中で最高の優先度を保持する
+
+    void ChangeLevelRunning(Task *task, int level); // 実行可能状態のtaskの優先度レベルを変更する
 };
 
 

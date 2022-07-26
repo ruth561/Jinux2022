@@ -18,6 +18,12 @@ namespace {
     {
         while (1) __asm__("hlt");
     }
+
+    template <class T, class U>
+    void Erase(T& c, const U& value) {
+        auto it = std::remove(c.begin(), c.end(), value);
+        c.erase(it, c.end());
+    }
 }
 
 Task::Task(uint64_t id) : id_{id} {}
@@ -63,9 +69,9 @@ Task *Task::Sleep()
     return this;
 }
 
-Task *Task::Wakeup()
+Task *Task::Wakeup(int level)
 {
-    task_manager->Wakeup(this);
+    task_manager->Wakeup(this, level);
     return this;
 }
 
@@ -88,10 +94,33 @@ Message Task::ReceiveMessage()
     return msg;
 }
 
+Task *Task::SetLevel(int level)
+{
+    level_ = level;
+    return this;
+}
+
+Task *Task::SetRunning(bool running)
+{
+    running_ = running;
+    return this;
+}
+
 
 TaskManager::TaskManager()
 {
-    running_.push_back(NewTask()); // OS用のタスク？
+    // OS用のタスクを最大優先度で現在実行中とする
+    Task *task = NewTask()
+        ->SetLevel(current_level_)
+        ->SetRunning(true);
+    running_[current_level_].push_back(task);
+
+    // 何もしないタスクを入れておく
+    Task *idle_task = NewTask()
+        ->InitContext(IdleTask, 0)
+        ->SetLevel(0)
+        ->SetRunning(true);
+    running_[0].push_back(idle_task);
 }
 
 Task *TaskManager::NewTask()
@@ -103,33 +132,37 @@ Task *TaskManager::NewTask()
 
 void TaskManager::SwitchTask(bool current_sleep)
 {
-    if (running_.empty()) {
-        logger->error("THERE ARE NO TASK!!\n");
-        __asm__("hlt");
-    }
-    Task *current_task = running_.front();
-    running_.pop_front();
+    Task *current_task = running_[current_level_].front();
+    running_[current_level_].pop_front();
     if (!current_sleep) {
-        running_.push_back(current_task);
+        running_[current_level_].push_back(current_task);
     }
-    Task *next_task = running_.front();
+
+    // 優先度の高い方から順に溜まっているタスクを探し始める。
+    for (uint64_t lv = kMaxLevel; lv >= 0; lv--) {
+        if (!running_[lv].empty()) {
+            current_level_ = lv;
+            break;
+        }
+    }
+    Task *next_task = running_[current_level_].front();
 
     SwitchContext(next_task->Context(), current_task->Context());
 }
 
 void TaskManager::Sleep(Task *task)
 {
-    auto it = std::find(running_.begin(), running_.end(), task);
-    if (it == running_.begin()) { // タスクが現在実行中なら
+    if (!task->Running()) { // すでにスリープ状態の時
+        return;
+    }
+    task->SetRunning(false);
+
+    if (task == running_[current_level_].front()) { // タスクが現在実行中なら
         SwitchTask(true);
         return;
     }
 
-    if (it == running_.end()) { // タスクが実行可能状態でないなら
-        return;
-    }
-
-    running_.erase(it); // 実行可能状態リストからタスクを削除
+    Erase(running_[task->Level()], task);
 }
 
 int TaskManager::Sleep(uint64_t id)
@@ -144,15 +177,25 @@ int TaskManager::Sleep(uint64_t id)
     return 0;
 }
 
-void TaskManager::Wakeup(Task *task) 
+void TaskManager::Wakeup(Task *task, int level) 
 {
-    auto it = std::find(running_.begin(), running_.end(), task);
-    if (it == running_.end()) { // 現在実行可能状態でないならば
-        running_.push_back(task);
+    if (task->Running()) { // タスクがすでに起きているなら
+        ChangeLevelRunning(task, level);
+        return;
     }
+    // タスクがスリープ状態の時
+    if (level < 0) { // levelが負の時は値を変えない
+        level = task->Level();
+    }
+
+    task->SetLevel(level);
+    task->SetRunning(true);
+
+    running_[level].push_back(task); // 新しいレベルのrunningキューにプッシュする
+    return;
 }
 
-int TaskManager::Wakeup(uint64_t id) 
+int TaskManager::Wakeup(uint64_t id, int level) 
 {
     auto it = std::find_if(tasks_.begin(), tasks_.end(), 
         [id](const auto& t){ return t->ID() == id; });
@@ -160,7 +203,7 @@ int TaskManager::Wakeup(uint64_t id)
         return -1;
     }
 
-    Wakeup(*it);
+    Wakeup(*it, level);
     return 0;
 }
 
@@ -178,8 +221,32 @@ int TaskManager::SendMessage(uint64_t id, Message msg)
 
 Task *TaskManager::CurrentTask()
 {
-    return running_.front();
+    return running_[current_level_].front();
 }
+
+void TaskManager::ChangeLevelRunning(Task *task, int level)
+{
+    if (level < 0 || level == task->Level()) { // levelが変わっていない場合や変更しない場合は無視する
+        return;
+    }
+
+    // level変更有りの時
+    if (task != running_[current_level_].front()) { // 現在実行中ではないならば
+        Erase(running_[task->Level()], task);
+        running_[level].push_back(task);
+        task->SetLevel(level);
+        return;
+    }
+
+    // 実行状態の場合
+    // このプログラムを実行しているタスクの優先度を変更するので
+    // 変更した先でも実行中でなければならない。
+    running_[current_level_].pop_front();
+    running_[level].push_front(task);
+    task->SetLevel(level);
+    current_level_ = level;
+}
+
 
 void InitializeTask()
 {

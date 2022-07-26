@@ -34,13 +34,6 @@ char logger_buf[sizeof(logging::Logger)]; // ロガー用領域
 logging::Logger *logger;
 
 
-void TaskA(uint64_t id, int64_t data)
-{
-    while (1) {
-        printk("TaskA!!\n");
-    }
-}
-
 extern "C" void KernelMainNewStack(
     const FrameBufferConfig *frame_buffer_config_ref, 
     const MemoryMap *memory_map_ref
@@ -56,15 +49,6 @@ extern "C" void KernelMainNewStack(
     logger = new(logger_buf) logging::Logger();
     logger->set_level(logging::kDEBUG); // ログレベルの変更・設定
 
-    /* uint64_t cr0 = GetCR0();
-    uint64_t cr2 = GetCR2();
-    uint64_t cr3 = GetCR3();
-    uint64_t cr4 = GetCR4();
-    logger->debug("CR0: %016lx\n", cr0);
-    logger->debug("CR2: %016lx\n", cr2);
-    logger->debug("CR3: %016lx\n", cr3);
-    logger->debug("CR4: %016lx\n", cr4); */
-    
     SetupSegments(); // UEFIの設定を更新し直す
     SetupIdentityPageTable(); // ページングの設定
     InitializeMemoryManager(memory_map); // メモリ管理の開始
@@ -75,17 +59,10 @@ extern "C" void KernelMainNewStack(
     InitializeTask(); // マルチタスクの開始
     Task *main_task = task_manager->CurrentTask();
 
-    uint64_t task_a_id = task_manager->NewTask()
-        ->InitContext(TaskA, 0xdeadbeef)
-        ->Wakeup()
-        ->ID();
-    logger->debug("TaskA id is %ld\n", task_a_id);
-    timer_manager->AddTimer(Timer(2000, 0xcafebabe));
-
     // logger->set_level(logging::kINFO); // 文字出力を制限
-    // task_manager->NewTask()->InitContext(RunApplication, 0xcafebabe);
-    
-
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xcafebabe)
+        ->Wakeup();
 
     while (1) {
         // main_queueの処理中は割り込みを受け付けないようにする
@@ -103,31 +80,13 @@ extern "C" void KernelMainNewStack(
             case Message::Type::kTimerTimeout:
                 logger->debug("Type: kTimerTimeout, Arg.timeout: %lx, Arg.value: %d\n", 
                     msg.arg.timer.timeout, msg.arg.timer.value);
-                task_manager->Sleep(task_a_id);
                 break;
             default:
                 break;
         }
     }
 
-
-
-
-
-
-
-
-    // ０除算例外を引き起こすコード
-    __asm__("divb 0");
-    uintptr_t p = 0x6234567890;
-    logger->debug("memory access %08x(%p)\n", *reinterpret_cast<int *>(p), p);
-    /* for (uint64_t i = 0; i < 64; i++) {
-        p = (static_cast<uint64_t>(1) << i);
-        logger->debug("memory access %08x(%p)\n", *reinterpret_cast<int *>(p), p);
-    } */
-
-    logger->info("execute Halt() ...\n");
-    Halt();
+    // ここには帰ってこない
 }
 
 
