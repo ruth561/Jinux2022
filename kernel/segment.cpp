@@ -80,20 +80,27 @@ void InitializeTSS()
     uint64_t ring0_stack_end = ring0_stack_begin + kRing0Frames * kBytesPerFrame;
     logger->debug("Ring0 stack: 0x%lx ~ 0x%lx\n", ring0_stack_begin, ring0_stack_end);
     
+    const int kISTFrames = 8; 
     // 通常の割り込み時
-    uint64_t ist1_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(8).Frame());
-    uint64_t ist1_end = ist1_begin + 8 * kBytesPerFrame;
+    uint64_t ist1_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(kISTFrames).Frame());
+    uint64_t ist1_end = ist1_begin + kISTFrames * kBytesPerFrame;
     logger->debug("IST1 : 0x%lx ~ 0x%lx\n", ist1_begin, ist1_end);
 
     // ＃GP用スタック領域
-    uint64_t ist2_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(8).Frame());
-    uint64_t ist2_end = ist2_begin + 8 * kBytesPerFrame;
+    uint64_t ist2_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(kISTFrames).Frame());
+    uint64_t ist2_end = ist2_begin + kISTFrames * kBytesPerFrame;
     logger->debug("IST2 : 0x%lx ~ 0x%lx\n", ist2_begin, ist2_end);
+
+    // ＃GP用スタック領域
+    uint64_t ist3_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(kISTFrames).Frame());
+    uint64_t ist3_end = ist3_begin + kISTFrames * kBytesPerFrame;
+    logger->debug("IST3 : 0x%lx ~ 0x%lx\n", ist3_begin, ist3_end);
 
     // TSSに値を指定する。
     tss.rsp0 = ring0_stack_end;
     tss.ist1 = ist1_end;
     tss.ist2 = ist2_end;
+    tss.ist3 = ist3_end;
     
     // GDTへの設定
     uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss);

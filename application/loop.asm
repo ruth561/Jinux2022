@@ -3,8 +3,8 @@
 bits 64
 section .text
 
-    push rax
-    pop rax
+;    push rax
+;    pop rax
     mov eax, 0
     mov r10, rcx
     mov rdi, 0x41424344454647

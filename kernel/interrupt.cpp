@@ -61,6 +61,22 @@ void InvalidOpecodeHandler(InterruptFrame *frame)
     while (1) __asm__("hlt");
 }
 
+// #DF(08)
+// 例外ハンドラの実行中に例外が検知されたことを示す例外。
+// 本来、例外ハンドラを呼び出している最中に更に例外が起きた場合は、
+// ２つの例外をハンドルしなければならないが、その時はそれら２つの例外はハンドルせず
+// この例外を処理することになっている。
+// 例外の種類は「Abort」であり、プログラムの復帰はできないようになっている。
+__attribute__((interrupt))
+void DoubleFaultHandler(InterruptFrame *frame, uint64_t error_code)
+{
+    logger->error("[!-- EXCEPTION --!] DOUBLE FAULT! PROCESS %ld\n", 
+        task_manager->CurrentTask()->ID());
+        
+    __asm__("cli"); // OSを止める
+    while (1) __asm__("hlt");
+}
+
 // #NP(11)
 __attribute__((interrupt))
 void SegmentNotPresentHandler(InterruptFrame *frame, uint64_t error_code)
@@ -131,6 +147,9 @@ void SetupInterruptDescriptorTable()
     logger->info("Setting IDT[%02xh] kInvalidOpecode\n", InterruptVector::kInvalidOpecode); // 無効命令
     SetIDTEntry(InterruptVector::kInvalidOpecode, reinterpret_cast<uintptr_t>(InvalidOpecodeHandler), cs, 14);
 
+    logger->info("Setting IDT[%02xh] kDoubleFault\n", InterruptVector::kDoubleFault); // 例外ハンドラ中の例外
+    SetIDTEntry(InterruptVector::kDoubleFault, reinterpret_cast<uintptr_t>(DoubleFaultHandler), cs, 14);
+
     logger->info("Setting IDT[%02xh] kSegmentNotPresent\n", InterruptVector::kSegmentNotPresent); // セグメントの不在
     SetIDTEntry(InterruptVector::kSegmentNotPresent, reinterpret_cast<uintptr_t>(SegmentNotPresentHandler), cs, 14);
 
@@ -138,7 +157,7 @@ void SetupInterruptDescriptorTable()
     SetIDTEntry(InterruptVector::kGeneralProtection, reinterpret_cast<uintptr_t>(GeneralProtectionHandler), cs, 14, kISTForGP);
 
     logger->info("Setting IDT[%02xh] kPageFault\n", InterruptVector::kPageFault); // ページフォルト
-    SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。
+    SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14, kISTForPF); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。
 
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
     SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14, kISTForTimer);

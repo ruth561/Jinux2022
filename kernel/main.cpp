@@ -68,6 +68,9 @@ extern "C" void KernelMainNewStack(
     task_manager->NewTask()
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
+    task_manager->NewTask()
+        ->InitContext(RunApplication, 0xefefefef)
+        ->Wakeup();
 
 
     while (1) {
