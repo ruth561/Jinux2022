@@ -47,8 +47,8 @@ void InitializeSyscall()
     WriteMSR(IA32_EFER_ADDRESS, efer.data);
 
     IA32_STAR star;
-    star.bits.syscall_cs_ss = kKernelCS;
-    star.bits.sysret_cs_ss = (kUserCS - 16) | 3;
+    star.bits.syscall_cs_ss = kKernelCS; 
+    star.bits.sysret_cs_ss = (kUserCS - 16) | 3; // 16の補正を行う
     logger->debug("IA32_STAR: 0x%lx\n", star.data);
     WriteMSR(IA32_STAR_ADDRESS, star.data);
 

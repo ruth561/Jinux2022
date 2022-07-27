@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-
+ 
 /* 
  * Macine Specific Registerの構造体定義
  */

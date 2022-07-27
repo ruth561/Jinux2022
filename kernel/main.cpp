@@ -63,12 +63,12 @@ extern "C" void KernelMainNewStack(
     InitializeSyscall(); // システムコールを使用可能にする
 
 
+
     // logger->set_level(logging::kINFO); // 文字出力を制限
     task_manager->NewTask()
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
-    
- 
+
 
     while (1) {
         // main_queueの処理中は割り込みを受け付けないようにする
@@ -92,7 +92,7 @@ extern "C" void KernelMainNewStack(
         }
     }
 
-    // ここには帰ってこない
+    // ここには到達しない
 }
 
 

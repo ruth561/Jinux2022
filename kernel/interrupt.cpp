@@ -83,7 +83,7 @@ void GeneralProtectionHandler(InterruptFrame *frame, uint64_t error_code)
 }
 
 // #PF(14)
-__attribute__((interrupt))
+__attribute__((interrupt)) 
 void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 {
     // DebugFunc();
