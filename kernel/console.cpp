@@ -28,6 +28,7 @@ Console::Console(
 
 void Console::PutString(const char *s)
 {
+    __asm__("cli");
     while (*s) {
         if (*s == '\n') {
             NewLine();
@@ -38,6 +39,7 @@ void Console::PutString(const char *s)
         }
         s++;
     }
+    __asm__("sti");
 }
 
 void Console::NewLine()

@@ -115,7 +115,7 @@ int printk(const char *format, ...) {
     va_start(ap, format);
     res = vsprintf(s, format, ap);
     va_end(ap);
-
+    
     console->PutString(s);
     return res;
 }
