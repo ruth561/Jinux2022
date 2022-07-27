@@ -18,6 +18,7 @@
 #include "message.hpp"
 #include "task.hpp"
 #include "run_application.hpp"
+#include "syscall.hpp"
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -59,20 +60,14 @@ extern "C" void KernelMainNewStack(
     InitializeTask(); // マルチタスクの開始
     Task *main_task = task_manager->CurrentTask();
 
+    InitializeSyscall(); // システムコールを使用可能にする
+
 
     // logger->set_level(logging::kINFO); // 文字出力を制限
     task_manager->NewTask()
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
-    task_manager->NewTask()
-        ->InitContext(RunApplication, 0xefefefef)
-        ->Wakeup();
-    task_manager->NewTask()
-        ->InitContext(RunApplication, 0xefefefef)
-        ->Wakeup();
-    task_manager->NewTask()
-        ->InitContext(RunApplication, 0xefefefef)
-        ->Wakeup();
+    
  
 
     while (1) {
@@ -115,7 +110,7 @@ int printk(const char *format, ...) {
     va_start(ap, format);
     res = vsprintf(s, format, ap);
     va_end(ap);
-    
+
     console->PutString(s);
     return res;
 }

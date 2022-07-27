@@ -1,4 +1,6 @@
 make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+make: *** No rule to make target 'all'.  Stop.
+
 # GNU Make 4.2.1
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2016 Free Software Foundation, Inc.
@@ -6,7 +8,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Jul 26 16:25:56 2022
+# Make data base, printed on Wed Jul 27 13:10:59 2022
 
 # Variables
 
@@ -47,7 +49,7 @@ VSCODE_NLS_CONFIG = {"locale":"ja","availableLanguages":{"*":"ja"},"_languagePac
 # environment
 _ = /usr/share/code/code
 # environment
-JOURNAL_STREAM = 8:47608
+JOURNAL_STREAM = 8:44693
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -65,7 +67,7 @@ DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-MANAGERPID = 1567
+MANAGERPID = 1638
 # environment
 CLUTTER_IM_MODULE = fcitx
 # environment
@@ -79,7 +81,7 @@ PATH = /home/ruth/.local/bin:/opt/java/jdk-11.0.2/bin:/home/ruth/.local/bin:/usr
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1790,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1790
+SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1865,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1865
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -89,7 +91,7 @@ VSCODE_LOG_STACK = false
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = fb995ca61d534a23bfd41fdb6af7595e
+INVOCATION_ID = 5314e04fdcc94aaf9d57579ea4a5c2a9
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -99,7 +101,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 29785
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2293
 # automatic
 %F = $(notdir $%)
 # environment
@@ -113,7 +115,7 @@ PWD = /home/ruth/Documents/Jinux2022
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1738
+SSH_AGENT_PID = 1812
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -149,7 +151,7 @@ SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-1e2337b3-5910-40ce-9026-c703bcb98104.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-adb6e39e-8c9c-4217-aeee-fe504b596f0b.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -211,7 +213,7 @@ GJS_DEBUG_OUTPUT = stderr
 # environment
 LANG = C
 # environment
-VSCODE_PID = 29785
+VSCODE_PID = 2293
 # variable set hash-table stats:
 # Load=101/1024=10%, Rehash=0, Collisions=13/123=11%
 
@@ -279,8 +281,6 @@ GNUmakefile:
 # strcache performance: lookups = 25 / hit rate = 12%
 # hash-table stats:
 # Load=22/8192=0%, Rehash=0, Collisions=1/25=4%
-# Finished Make data base on Tue Jul 26 16:25:56 2022
+# Finished Make data base on Wed Jul 27 13:10:59 2022
 
  
-make: *** No rule to make target 'all'.  Stop.
-

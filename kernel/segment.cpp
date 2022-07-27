@@ -62,8 +62,8 @@ void SetupSegments() {
     gdt[0].data = 0;
     SetCodeSegment(&gdt[1], DescriptorType::kExecuteRead, 0, 0, 0xfffff);
     SetDataSegment(&gdt[2], DescriptorType::kReadWrite, 0, 0, 0xfffff);
-    SetCodeSegment(&gdt[3], DescriptorType::kExecuteRead, 3, 0, 0xfffff); // アプリ用
-    SetDataSegment(&gdt[4], DescriptorType::kReadWrite, 3, 0, 0xfffff); // アプリ用
+    SetCodeSegment(&gdt[3], DescriptorType::kReadWrite, 3, 0, 0xfffff); // アプリ用
+    SetDataSegment(&gdt[4], DescriptorType::kExecuteRead, 3, 0, 0xfffff); // アプリ用
     LoadGDT(sizeof(gdt) - 1, reinterpret_cast<uintptr_t>(&gdt[0]));
 
     SetDSAll(kKernelDS);
@@ -80,13 +80,20 @@ void InitializeTSS()
     uint64_t ring0_stack_end = ring0_stack_begin + kRing0Frames * kBytesPerFrame;
     logger->debug("Ring0 stack: 0x%lx ~ 0x%lx\n", ring0_stack_begin, ring0_stack_end);
     
+    // 通常の割り込み時
     uint64_t ist1_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(8).Frame());
     uint64_t ist1_end = ist1_begin + 8 * kBytesPerFrame;
     logger->debug("IST1 : 0x%lx ~ 0x%lx\n", ist1_begin, ist1_end);
 
+    // ＃GP用スタック領域
+    uint64_t ist2_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(8).Frame());
+    uint64_t ist2_end = ist2_begin + 8 * kBytesPerFrame;
+    logger->debug("IST2 : 0x%lx ~ 0x%lx\n", ist2_begin, ist2_end);
+
     // TSSに値を指定する。
     tss.rsp0 = ring0_stack_end;
     tss.ist1 = ist1_end;
+    tss.ist2 = ist2_end;
     
     // GDTへの設定
     uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss);

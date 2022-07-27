@@ -21,6 +21,7 @@ enum InterruptVector
 
 // 各割り込みが用いるISTの値を定義
 const int kISTForTimer = 1; 
+const int kISTForGP = 2;
 
 // IDTのエントリ
 struct InterruptDescriptor 

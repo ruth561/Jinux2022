@@ -50,12 +50,15 @@ void DivideErrorHandler(void *frame)
 // #UD(06)
 // 今の所、機能しているかよくわからない、、
 __attribute__((interrupt))
-void InvalidOpecodeHandler(void *frame)
+void InvalidOpecodeHandler(InterruptFrame *frame)
 {
-    logger->error("[!-- EXCEPTION --!] INVALID OPCODE EXCEPTION! PROCESS %ld\n", 
+    logger->error("[!-- EXCEPTION --!] INVALID OPCODE EXCEPTION! PROCESS %ld.\n", 
         task_manager->CurrentTask()->ID());
-
-    __asm__("hlt");
+    logger->error("RIP=0x%lx, CS=0x%lx, RFLAGS=0x%lx, RSP=0x%lx, SS=0x%lx\n",
+        frame->rip, frame->cs, frame->rflags, frame->rsp, frame->ss);
+        
+    __asm__("sti");
+    while (1) __asm__("hlt");
 }
 
 // #NP(11)
@@ -63,7 +66,7 @@ __attribute__((interrupt))
 void SegmentNotPresentHandler(InterruptFrame *frame, uint64_t error_code)
 {
     logger->error("[!-- EXCEPTION --!] SEGMENT NOT PRESENT!\n");
-    __asm__("hlt");
+    while (1) __asm__("hlt");
 }
 
 // #GP(13)
@@ -132,7 +135,7 @@ void SetupInterruptDescriptorTable()
     SetIDTEntry(InterruptVector::kSegmentNotPresent, reinterpret_cast<uintptr_t>(SegmentNotPresentHandler), cs, 14);
 
     logger->info("Setting IDT[%02xh] kGeneralProtection\n", InterruptVector::kGeneralProtection); // 一般保護例外
-    SetIDTEntry(InterruptVector::kGeneralProtection, reinterpret_cast<uintptr_t>(GeneralProtectionHandler), cs, 14);
+    SetIDTEntry(InterruptVector::kGeneralProtection, reinterpret_cast<uintptr_t>(GeneralProtectionHandler), cs, 14, kISTForGP);
 
     logger->info("Setting IDT[%02xh] kPageFault\n", InterruptVector::kPageFault); // ページフォルト
     SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。

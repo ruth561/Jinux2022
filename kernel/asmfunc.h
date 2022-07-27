@@ -20,6 +20,12 @@ extern "C" {
     void RestoreContext(void* task_context);
     // LAPICタイマーの割り込み時に呼ばれる関数
     void IntHandlerLAPICTimer();
+
+    // msrで指定した番号にvalueを格納する命令
+    void WriteMSR(uint32_t msr, uint64_t value);
+    // syscallを実行された時に呼び出されるOS側の関数
+    void SyscallEntry(void);
+
     void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
     
     // リニアアドレスから8bytesのデータを読み出し返り値にする。

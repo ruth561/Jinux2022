@@ -69,8 +69,8 @@ void SetDataSegment(SegmentDescriptor *desc,
 
 const uint16_t kKernelCS = 1 << 3;
 const uint16_t kKernelSS = 2 << 3;
-const uint16_t kUserCS = 3 << 3;
-const uint16_t kUserSS = 4 << 3;
+const uint16_t kUserCS = 4 << 3; // ユーザーはカーネルと逆順！！
+const uint16_t kUserSS = 3 << 3; // ユーザーはカーネルと逆順！！
 const uint16_t kTSS = 5 << 3;
 const uint16_t kKernelDS = 0;
 

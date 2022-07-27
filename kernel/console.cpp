@@ -37,7 +37,7 @@ void Console::PutString(const char *s)
             buffer_[cursor_row_][cursor_column_] = *s;
             cursor_column_++;
         }
-        s++;
+        s++; 
     }
     __asm__("sti");
 }
