@@ -305,17 +305,14 @@ extern syscall_table
 global SyscallEntry
 SyscallEntry:  ; void SyscallEntry(void);
     push rbp
-    push rcx  ; original RIP
-    push r11  ; original RFLAGS
+    push rcx  ; syscallの戻りアドレス
+    push r11  ; syscall前のRFALGSの値（後で復帰）
 
-    mov rcx, r10
-    and eax, 0x7fffffff
-    mov rbp, rsp
-    and rsp, 0xfffffffffffffff0
+    mov rcx, r10 ; 第４引数の復帰
+    mov rbp, rsp ; RSPの退避
+    and rsp, 0xfffffffffffffff0 ; RSPの16bytesアラインメント
 
-    call [syscall_table + 8 * eax]
-    ; rbx, r12-r15 は callee-saved なので呼び出し側で保存しない
-    ; rax は戻り値用なので呼び出し側で保存しない
+    call [syscall_table + 8 * rax]
 
     mov rsp, rbp
 

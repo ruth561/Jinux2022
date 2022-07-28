@@ -22,15 +22,29 @@ namespace syscall
         return 0;
     }
 
+    SYSCALL(SyscallLogString) {
+        printk(reinterpret_cast<char *>(arg1));
+        return 0;
+    }
+
     #undef SYSCALL
 
-} // namespace syscall
+}
 
+/* 
+ * rax: 返り値
+ * rdi, rsi, rdx, rcx, r8, r9が引数
+ */
 using SyscallFuncType = int64_t (uint64_t, uint64_t, uint64_t,
                                  uint64_t, uint64_t, uint64_t);
 
-extern "C" std::array<SyscallFuncType*, 1> syscall_table{
+/* 
+ * syscallが呼ばれた時に実行される関数を管理
+ * syscall_table[rax]が呼び出される関数
+ */
+extern "C" std::array<SyscallFuncType*, 2> syscall_table{
     syscall::PutString,
+    syscall::SyscallLogString, 
 };
 
 

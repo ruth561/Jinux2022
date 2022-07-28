@@ -7,6 +7,7 @@
 #include "asmfunc.h"
 #include "logging.hpp"
 #include "segment.hpp"
+#include "elf.hpp"
 
 /* 
  * 独自のPML4ページング構造体を実装し、0xffff800000000000アドレス以降を利用して

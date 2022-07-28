@@ -72,7 +72,6 @@ extern "C" void KernelMainNewStack(
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
 
-
     while (1) {
         // main_queueの処理中は割り込みを受け付けないようにする
         __asm__("cli");
