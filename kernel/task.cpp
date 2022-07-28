@@ -165,7 +165,7 @@ void TaskManager::Sleep(Task *task)
     if (!task->Running()) { // すでにスリープ状態の時
         return;
     }
-    task->SetRunning(false);
+    task->SetRunning(false); 
 
     if (task == running_[current_level_].front()) { // タスクが現在実行中なら
         Task* current_task = RotateCurrentRunQueue(true);

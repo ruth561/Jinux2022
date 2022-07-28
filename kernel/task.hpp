@@ -52,6 +52,8 @@ public:
     bool Running() { return running_; } // 実行可能常態か？
     Task *SetLevel(int level);
     Task *SetRunning(bool running);
+    uint64_t os_stack_pointer_; // アプリケーション実行後OSの処理に戻ってくる時に用いる
+    uint64_t GetOSStackPointer() { return os_stack_pointer_; }
 
     void SendMessage(const Message msg); // このタスクの持つメッセージキューにプッシュし、実行可能状態へ遷移
     Message ReceiveMessage(); // メッセージキューからポップする。何も入っていない場合、kNullMessageタイプのメッセージを返す。

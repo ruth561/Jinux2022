@@ -56,7 +56,7 @@ AppFunc *LoadElfFile(uint64_t head){
     ehdr = reinterpret_cast<Elf64_Ehdr *>(head);
     phdr = reinterpret_cast<Elf64_Phdr *>(head + ehdr->e_phoff);
 
-    logger->info("[+] NOW LOADING ELF FILE...\n");
+    logger->info("[ELF] NOW LOADING ELF FILE...\n");
     for (int i = 0; i < ehdr->e_phnum; i++){
         // logger->debug("Program Header %d: ", i);
         switch (phdr->p_type){
@@ -77,16 +77,16 @@ AppFunc *LoadElfFile(uint64_t head){
         phdr++;
     }
     // ここまでで、ELFファイルのメモリへのマッピングが終了した。
-    logger->info("[+] PROGRAM IS MAPPED TO MEMORY.\n");
+    logger->info("[ELF] PROGRAM IS MAPPED TO MEMORY.\n");
 
 
     // BSS領域の０クリア
     shdr = search_shdr(ehdr, ".bss");
     if (shdr){
-        logger->info("[+] CLEAR BSS: 0x%016lx ~ 0x%016lx\n", shdr->sh_addr, shdr->sh_addr + shdr->sh_size);
+        logger->info("[ELF] CLEAR BSS: %016lxH ~ %016lxH\n", shdr->sh_addr, shdr->sh_addr + shdr->sh_size);
         memset(reinterpret_cast<void *>(shdr->sh_addr), 0, shdr->sh_size);
     }
 
-    logger->info("[+] ENTRY POINT: 0x%016lx\n", ehdr->e_entry);
+    logger->info("[ELF] ENTRY POINT: %016lxH\n", ehdr->e_entry);
     return reinterpret_cast<AppFunc *>(ehdr->e_entry);
 }

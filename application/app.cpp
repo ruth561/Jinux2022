@@ -5,5 +5,5 @@
 extern "C" int main() {
     SyscallLogString("hello, world!\n");
     
-    while (1);
+    SyscallExit(1105);
 }

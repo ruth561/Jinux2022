@@ -308,6 +308,8 @@ SyscallEntry:  ; void SyscallEntry(void);
     push rcx  ; syscallの戻りアドレス
     push r11  ; syscall前のRFALGSの値（後で復帰）
 
+    push rax  ; syscall numberの保存
+
     mov rcx, r10 ; 第４引数の復帰
     mov rbp, rsp ; RSPの退避
     and rsp, 0xfffffffffffffff0 ; RSPの16bytesアラインメント
@@ -316,19 +318,50 @@ SyscallEntry:  ; void SyscallEntry(void);
 
     mov rsp, rbp
 
+    pop rsi  ; syscall numberの復帰
+    cmp rsi, 0  ; syscallがExitだった場合
+    je  .exit
+
     pop r11
     pop rcx
     pop rbp
     o64 sysret
 
+; SyscallEntryから呼ばれる
+; raxにはExitシステムコールの返り値
+extern GetOSStackInExitSyscall
+.exit:
+    push rax  ; 一旦Exitステータスを保存
+    call GetOSStackInExitSyscall
+    mov rsi, rax  ; 返り値を一旦退避
+    pop rax  ; Exitステータスを復帰
+    mov rsp, rsi  ; rsp値を呼び出し時のOSの値に戻す。（ここから元のOSをのスタックの状態になる。）
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+    ; この時点でCallAppを呼び出した直後の状態に復帰している
+    ret ; CallApp呼び出し元へ復帰
+
+
 global CallApp
-CallApp: ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+CallApp: ; int64_t CallApp(int argc, char** argv, uint16_t ss, uint64_t rip, uint64_t rsp, uint64_t *os_stack_pointer);
+    push rbx
     push rbp
-    mov rbp, rsp
-    push rcx  ; SS
-    push r9   ; RSP
+    push r12
+    push r13
+    push r14
+    push r15
+    mov [r9], rsp
+
+    push rdx  ; SS
+    push r8   ; RSP
+    add rdx, 8 ; CSの値はSSに８を足したもの
     push rdx  ; CS
-    push r8   ; RIP
+    push rcx   ; RIP
     o64 retf
 
 

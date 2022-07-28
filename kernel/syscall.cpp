@@ -1,8 +1,11 @@
 #include "syscall.hpp"
+#include "task.hpp"
 #include <cstring>
 
 int printk(const char *format, ...);
 extern logging::Logger *logger;
+extern TaskManager* task_manager;
+
 
 #define IA32_EFER_ADDRESS 0xc000'0080u
 #define IA32_STAR_ADDRESS 0xc000'0081u
@@ -11,18 +14,16 @@ extern logging::Logger *logger;
 
 namespace syscall
 {
-
     #define SYSCALL(name) \
         int64_t name(uint64_t arg1, uint64_t arg2, uint64_t arg3, \
                      uint64_t arg4, uint64_t arg5, uint64_t arg6)
 
-    SYSCALL(PutString) {
-        uint64_t string = arg1;
-        printk(reinterpret_cast<char *>(&string));
-        return 0;
+    SYSCALL(Exit) { // 単に第一引数に渡された値を返り値として返す
+        // logger->debug("SYSCALL EXIT HANDLE!!\n");
+        return static_cast<int64_t>(arg1); // exit(0)のように呼ばれたら、0を返す
     }
 
-    SYSCALL(SyscallLogString) {
+    SYSCALL(SyscallLogString) { // 文字列の出力（syscall number 1）
         printk(reinterpret_cast<char *>(arg1));
         return 0;
     }
@@ -43,9 +44,23 @@ using SyscallFuncType = int64_t (uint64_t, uint64_t, uint64_t,
  * syscall_table[rax]が呼び出される関数
  */
 extern "C" std::array<SyscallFuncType*, 2> syscall_table{
-    syscall::PutString,
+    syscall::Exit,
     syscall::SyscallLogString, 
 };
+
+
+/* 
+ * システムコール関連で他から呼び出される関数群
+ */
+
+// 現在実行中のアプリケーションを呼び出したときのOSスタックの値を返す。
+extern "C" uint64_t GetOSStackInExitSyscall()
+{
+    __asm__("cli");
+    Task *task = task_manager->CurrentTask();
+    __asm__("sti");
+    return task->GetOSStackPointer();
+}
 
 
 void InitializeSyscall()
@@ -76,4 +91,3 @@ void InitializeSyscall()
     logger->debug("IA32_FMASK: 0x%lx\n", fmask.data);
     WriteMSR(IA32_FMASK_ADDRESS, fmask.data);
 }
-

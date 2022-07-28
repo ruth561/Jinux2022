@@ -26,7 +26,11 @@ extern "C" {
     // syscallを実行された時に呼び出されるOS側の関数
     void SyscallEntry(void);
 
-    void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+    // argc, argvはアプリへの引数
+    // csはアプリを実行するときのcsとssの値を格納
+    // ripはアプリのエントリポイント、rspはアプリのスタックポインタ
+    // os_stack_pointerは、OSのrsp値を格納しておくための変数へのポインタ。ここに格納した値は、アプリから帰って来る時にOSへ制御を戻す時に使う
+    int64_t CallApp(int argc, char** argv, uint16_t ss, uint64_t rip, uint64_t rsp, uint64_t *os_stack_pointer);
     
     // リニアアドレスから8bytesのデータを読み出し返り値にする。
     // ページングの検証のために作成。

@@ -63,8 +63,7 @@ extern "C" void KernelMainNewStack(
     InitializeSyscall(); // システムコールを使用可能にする
 
 
-
-    // logger->set_level(logging::kINFO); // 文字出力を制限
+    logger->set_level(logging::kINFO); // 文字出力を制限
     task_manager->NewTask()
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
