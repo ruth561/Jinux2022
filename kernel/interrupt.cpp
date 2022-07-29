@@ -133,6 +133,44 @@ void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 }
 
 
+int printk(const char *format, ...);
+
+// エラーコードありの例外ハンドラ
+#define FaultHandlerWithError(fault_name) \
+    __attribute__((interrupt)) \
+    void IntHandler ## fault_name (InterruptFrame* frame, uint64_t error_code) { \
+        printk("[!-- EXCEPTION --!] #%s\n", #fault_name); \
+        while (true) __asm__("hlt"); \
+    }
+
+// エラーコードなしの例外ハンドラ
+#define FaultHandlerNoError(fault_name) \
+    __attribute__((interrupt)) \
+    void IntHandler ## fault_name (InterruptFrame* frame) { \
+        printk("[!-- EXCEPTION --!] #%s\n", #fault_name); \
+        while (true) __asm__("hlt"); \
+    }
+
+FaultHandlerNoError(DE)
+FaultHandlerNoError(DB)
+FaultHandlerNoError(BP)
+FaultHandlerNoError(OF)
+FaultHandlerNoError(BR)
+FaultHandlerNoError(UD)
+FaultHandlerNoError(NM)
+FaultHandlerWithError(DF)
+FaultHandlerWithError(TS)
+FaultHandlerWithError(NP)
+FaultHandlerWithError(SS)
+FaultHandlerWithError(GP)
+// FaultHandlerWithError(PF)
+FaultHandlerNoError(MF)
+FaultHandlerWithError(AC)
+FaultHandlerNoError(MC)
+FaultHandlerNoError(XM)
+FaultHandlerNoError(VE)
+
+
 void SetupInterruptDescriptorTable()
 {
     logger->info("[+] Setup IDT\n");
@@ -162,7 +200,32 @@ void SetupInterruptDescriptorTable()
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
     SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14, kISTForTimer);
 
-
+    auto set_idt_entry = [](int vector_number, auto handler) {
+        idt[vector_number].SetOffset(reinterpret_cast<uintptr_t>(handler));
+        idt[vector_number].segment_selector = kKernelCS;
+        idt[vector_number].interrupt_stack_table = 2;
+        idt[vector_number].type = 14;
+        idt[vector_number].descriptor_priviledge_level = 0;
+        idt[vector_number].segment_present_flag = 1;
+    };
+    set_idt_entry(0,  IntHandlerDE);
+    set_idt_entry(1,  IntHandlerDB);
+    set_idt_entry(3,  IntHandlerBP);
+    set_idt_entry(4,  IntHandlerOF);
+    set_idt_entry(5,  IntHandlerBR);
+    set_idt_entry(6,  IntHandlerUD);
+    set_idt_entry(7,  IntHandlerNM);
+    set_idt_entry(8,  IntHandlerDF);
+    set_idt_entry(10, IntHandlerTS);
+    set_idt_entry(11, IntHandlerNP);
+    set_idt_entry(12, IntHandlerSS);
+    set_idt_entry(13, IntHandlerGP);
+    // set_idt_entry(14, IntHandlerPF);
+    set_idt_entry(16, IntHandlerMF);
+    set_idt_entry(17, IntHandlerAC);
+    set_idt_entry(18, IntHandlerMC);
+    set_idt_entry(19, IntHandlerXM);
+    set_idt_entry(20, IntHandlerVE);
     // idtrレジスタを新しいテーブルのアドレスに書き換える。
     LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
