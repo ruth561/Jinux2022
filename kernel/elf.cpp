@@ -58,7 +58,7 @@ AppFunc *LoadElfFile(uint64_t head){
 
     logger->info("[ELF] NOW LOADING ELF FILE...\n");
     for (int i = 0; i < ehdr->e_phnum; i++){
-        // logger->debug("Program Header %d: ", i);
+        logger->debug("Program Header %d: ", i);
         switch (phdr->p_type){
             case PT_LOAD:
                 // logger->debug("type: LOAD\n");
@@ -68,10 +68,10 @@ AppFunc *LoadElfFile(uint64_t head){
                 memcpy(reinterpret_cast<void *>(phdr->p_vaddr), 
                        reinterpret_cast<void *>(head + phdr->p_offset), 
                        phdr->p_filesz);
-                // logger->debug("(loaded)\n");
+                logger->debug("(loaded)\n");
                 break;
             default:
-                // logger->debug("type: OTHERS\n");
+                logger->debug("type: OTHERS\n");
                 break;
         }
         phdr++;
