@@ -62,9 +62,8 @@ extern "C" void KernelMainNewStack(
 
     InitializeSyscall(); // システムコールを使用可能にする
 
-    int *ptr = reinterpret_cast<int *>(0xffff800000000000lu);
-    *ptr = 0x12345678;
-    while (1);
+
+    // logger->set_level(logging::kERROR); // 例外ハンドラ内でsvprintfを使用しないためにフィルターを強める
 
     // logger->set_level(logging::kINFO); // 文字出力を制限
     task_manager->NewTask()

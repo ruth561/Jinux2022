@@ -882,6 +882,10 @@ uint64_t app_rsp = 0xffffc00000000000lu;
 void RunApplication(uint64_t a, int64_t data)
 {
     SetupPML4(); // このタスク用に個別のページング構造を作成しCR3に設定する。
+    LinearAddress4Level linear;
+    linear.data = 0xffff800000000000;
+    SetupPageMapForApp(linear, true);
+
     AppFunc *app_entry_point;
     if (app[0] == '\x7f' && 
         app[1] == 'E' &&
@@ -971,6 +975,6 @@ int SetupPageMapForApp(LinearAddress4Level linear_address, bool writable)
         entry->bits.page_size = 1; // このポインターが指す領域がページである
     }
 
-    logger->debug("Successed set page map at 0x%lx\n", linear_address.data);
+    // logger->debug("Successed set page map at 0x%lx\n", linear_address.data);
     return 1;
 }

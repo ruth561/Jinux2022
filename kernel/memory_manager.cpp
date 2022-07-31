@@ -18,8 +18,8 @@ void BitmapMemoryManager::SetMemoryRange(FrameID range_begin, FrameID range_end)
 
 void BitmapMemoryManager::MarkAllocated(FrameID start_frame, size_t num_frames)
 {
-    logger->debug("[Mark 0x%x frames from %p (ID: %lx)]\n", 
-       num_frames, start_frame.Frame(), start_frame.ID());
+    /* logger->debug("[Mark 0x%x frames from %p (ID: %lx)]\n", 
+       num_frames, start_frame.Frame(), start_frame.ID()); */
 
     for (size_t i = 0; i < num_frames; i++) {
         SetBit(FrameID{start_frame.ID() + i}, true);
