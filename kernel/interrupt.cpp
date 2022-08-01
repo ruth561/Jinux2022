@@ -71,6 +71,14 @@ void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 }
 
 
+// XHCIの割り込みハンドラ
+__attribute__((interrupt)) 
+void IntHandlerXHCI(InterruptFrame *frame)
+{
+    printk("[!-- INTERRUPT --!] xHCI\n");
+    NotifyEndOfInterrupt();
+}
+
 // エラーコードありの例外ハンドラ
 #define FaultHandlerWithError(fault_name) \
     __attribute__((interrupt)) \
@@ -118,6 +126,9 @@ void SetupInterruptDescriptorTable()
 
     logger->info("Setting IDT[%02xh] kPageFault\n", InterruptVector::kPageFault); // ページフォルト
     SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14, kISTForPF); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。
+
+    logger->info("Setting IDT[%02xh] kXHCI\n", InterruptVector::kXHCI); // xHCI
+    SetIDTEntry(InterruptVector::kXHCI, reinterpret_cast<uintptr_t>(IntHandlerXHCI), cs, 14, kISTForTimer);
 
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
     SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14, kISTForTimer);

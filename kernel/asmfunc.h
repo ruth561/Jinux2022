@@ -3,6 +3,11 @@
 #include <stdint.h>
 
 extern "C" {
+    // 指定したIOアドレス空間のアドレスにvalueを書き込む
+    void WriteIOAddressSpace32(uint16_t address, uint32_t value);
+    // 指定したIOアドレス空間のアドレスから４bytes分読み出す
+    uint32_t ReadIOAddressSpace32(uint16_t address);
+
     uint16_t GetCS(void);
     void LoadIDT(uint16_t limit, uint64_t offset);
     void LoadGDT(uint16_t limit, uint64_t offset);

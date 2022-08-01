@@ -19,6 +19,7 @@
 #include "task.hpp"
 #include "run_application.hpp"
 #include "syscall.hpp"
+#include "pci.hpp"
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -60,18 +61,22 @@ extern "C" void KernelMainNewStack(
     InitializeTask(); // マルチタスクの開始
     Task *main_task = task_manager->CurrentTask();
 
+
+    logger->set_level(logging::kINFO); // 出力減らす
+    InitializePCI();
+
     InitializeSyscall(); // システムコールを使用可能にする
 
 
     // logger->set_level(logging::kERROR); // 例外ハンドラ内でsvprintfを使用しないためにフィルターを強める
 
     // logger->set_level(logging::kINFO); // 文字出力を制限
-    task_manager->NewTask()
+    /* task_manager->NewTask()
         ->InitContext(RunApplication, 0xefefefef)
         ->Wakeup();
     task_manager->NewTask()
         ->InitContext(RunApplication, 0xefefefef)
-        ->Wakeup();
+        ->Wakeup(); */
 
     while (1) {
         // main_queueの処理中は割り込みを受け付けないようにする

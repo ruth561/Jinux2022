@@ -17,6 +17,7 @@ enum InterruptVector
     kSegmentNotPresent = 11,
     kGeneralProtection = 13, 
     kPageFault = 14,
+    kXHCI = 0x40, 
     kLAPICTimer = 0x41,
 };
 

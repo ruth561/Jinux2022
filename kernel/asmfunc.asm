@@ -15,6 +15,19 @@ KernelMain:
     hlt
     jmp .fin
 
+global WriteIOAddressSpace32 ; void WriteIOAddressSpace32(uint16_t address, uint32_t value);
+WriteIOAddressSpace32:
+    mov dx, di
+    mov eax, esi
+    out dx, eax
+    ret
+
+global ReadIOAddressSpace32 ; uint32_t ReadIOAddressSpace32(uint16_t address);
+ReadIOAddressSpace32:
+    mov dx, di
+    in eax, dx
+    ret
+
 global GetCS  ; uint16_t GetCS(void);
 GetCS:
     xor eax, eax  ; also clears upper 32 bits of rax
