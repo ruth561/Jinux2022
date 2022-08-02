@@ -6,6 +6,24 @@ extern logging::Logger *logger;
 namespace pci 
 {
     extern std::vector<Device> devices;
+
+    // PCIデバイスの中からxHCを一つ見つけ出し、devices要素へのポインタで返す
+    pci::Device *FindXHC() {
+        Device *res = nullptr;
+        for (int i = 0; i < pci::devices.size(); i++) {
+            if (pci::devices[i].base_class == 0x0c &&
+                pci::devices[i].sub_class == 0x03 &&
+                pci::devices[i].interface == 0x30) {
+                logger->debug("USB3.0 HOST CONTROLLER!!\n");
+                res = &pci::devices[i];
+                if (pci::ConfigureMSI(&pci::devices[i])) {
+                    logger->error("Failed to configure MSI.\n");
+                }
+                break;
+            }
+        }
+        return res;
+    }
 }
 
 
@@ -17,8 +35,8 @@ namespace usb::xhci
         mmio_base_(mmio_base),
         cap_((CapabilityRegisters *) mmio_base_),
         opt_((OperationalRegisters *) (mmio_base_ + cap_->CAPLENGTH)),
-        run_((RuntimeRegisters *) (mmio_base_ + cap_->RTSOFF.bits.runtime_register_space_offset)),
-        doorbell_((Doorbell_Bitmap *) (mmio_base_ + cap_->DBOFF.Offset())) {
+        run_((RuntimeRegisters *) (mmio_base_ + cap_->RTSOFF.Offset())),
+        doorbell_((DoorbellRegister *) (mmio_base_ + cap_->DBOFF.Offset())) {
         logger->debug("Capability Registers: %p\n", cap_);
         logger->debug("Operational Registers: %p\n", opt_);
         logger->debug("Runtime Registers: %p\n", run_);
@@ -28,12 +46,11 @@ namespace usb::xhci
         logger->debug("HCSPARAMS1: %08xH\n", cap_->HCSPARAMS1.data[0]);
         logger->debug("HCSPARAMS2: %08xH\n", cap_->HCSPARAMS2.data[0]);
         logger->debug("HCSPARAMS3: %08xH\n", cap_->HCSPARAMS3.data[0]);
-
-
     }
 
     int Controller::Initializer()
     {
+        logger->info("[+] Start Initializing XHC.\n");
         // xHCの初期化（リセット）を行う
         if (!opt_->USBSTS.bits.host_controller_halted) {
             logger->warning("xHC is not halted.\n");
@@ -53,17 +70,60 @@ namespace usb::xhci
         logger->info("[xHC Init] MaxInterrupters %d\n", cap_->HCSPARAMS1.bits.max_interrupters);
 
         // デバイススロットの有効化数は最大数までに設定する
-        printk("%d\n", opt_->CONFIG.data[0]);
         opt_->CONFIG.bits.max_device_slots_enabled = cap_->HCSPARAMS1.bits.max_device_slots;
-        printk("%d\n", opt_->CONFIG.data[0]);
 
         // デバイスマネージャーの初期化
         devmgr_.Initialize(cap_->HCSPARAMS1.bits.max_device_slots);
         opt_->DCBAAP.SetPointer(devmgr_.DeviceContexts());
         logger->info("[xHC Init] DCBAA           %p\n", opt_->DCBAAP.Pointer());
 
-        return -1;
+        // コマンドリングの初期化 -> CRCRへ設定
+        cr_.Initialize(32);
+        CRCR_Bitmap crcr{};
+        crcr.data[0] = 0;
+        crcr.bits.ring_cycle_state = true;
+        crcr.SetPointer(cr_.Buffer());
+        opt_->CRCR.data[0] = crcr.data[0]; 
+        logger->debug("Set CRCR %lxH\n", opt_->CRCR.data[0]);
+
+        // イベントリングの初期化 
+        InterrupterRegisterSet *primary_interrupt = &run_->IR[0];
+        er_.Initialize(32, primary_interrupt);
+
+        // 割り込みの設定
+        primary_interrupt->IMOD.bits.interrupt_moderation_interval = 4000;
+        primary_interrupt->IMAN.bits.interrupt_pending = true;
+        primary_interrupt->IMAN.bits.interrupt_enable = true;
+        opt_->USBCMD.bits.interrupter_enable = true;
+        logger->debug("Setup MSI Interrupt.\n");
+        logger->info("[+] Finish Initializing XHC.\n");
+
+        return 0;
     }
+    
+    void Controller::Run()
+    {
+        opt_->USBCMD.bits.run_stop = true;
+        while (opt_->USBSTS.bits.host_controller_halted);
+        logger->info("xHC power on!!\n");
+    }
+
+    Ring *Controller::CommandRing()
+    {
+        return &cr_;
+    }
+
+    EventRing *Controller::PrimaryEventRing()
+    {
+        return &er_;
+    }
+
+    void Controller::SendNoOpCommand()
+    {
+        NoOpCommandTRB trb = NoOpCommandTRB();
+        cr_.Push(&trb);
+        doorbell_[0].Ring(0, 0);
+    }   
 
 
 
@@ -76,22 +136,12 @@ namespace usb::xhci
     // グローバルなxhcにControllerのオブジェクトを作り、初期化等をする。
     void Initialize()
     {
-        pci::Device *xhc_dev = nullptr;
-        for (int i = 0; i < pci::devices.size(); i++) {
-            if (pci::devices[i].base_class == 0x0c &&
-                pci::devices[i].sub_class == 0x03 &&
-                pci::devices[i].interface == 0x30) {
-                logger->debug("USB3.0 HOST CONTROLLER!!\n");
-                xhc_dev = &pci::devices[i];
-                if (pci::ConfigureMSI(&pci::devices[i])) {
-                    logger->error("Failed to configure MSI.\n");
-                }
-                break;
-            }
-        }
+        pci::Device *xhc_dev = pci::FindXHC();
         if (!xhc_dev) { // xHCが存在しなかった場合はなにもしない
             return;
         }
+
+        // xHCのメモリマップドIOを取得
         uint64_t mmio_base_low = static_cast<uint64_t>(
             pci::ConfigRead32(xhc_dev->bus, xhc_dev->device, xhc_dev->function, 0x10));
         uint64_t mmio_base_high = static_cast<uint64_t>(
@@ -102,6 +152,24 @@ namespace usb::xhci
         xhc = new Controller(mmio_base);
         xhc->Initializer();
 
+        xhc->Run();
 
+        for (int i = 0; i < 20; i++) {
+            xhc->SendNoOpCommand();
+        }
+
+        while (xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
+            xhc->PrimaryEventRing()->Pop();
+        }
+
+        for (int i = 0; i < 20; i++) {
+            xhc->SendNoOpCommand();
+        }
+
+        while (xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
+            xhc->PrimaryEventRing()->Pop();
+        }
+
+ 
     }
 }

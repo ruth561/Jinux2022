@@ -15,7 +15,7 @@
 #include "memory_manager.hpp"
 #include "interrupt.hpp"
 #include "timer.hpp"
-#include "message.hpp"
+#include "message.hpp" 
 #include "task.hpp"
 #include "run_application.hpp"
 #include "syscall.hpp"
@@ -70,7 +70,7 @@ extern "C" void KernelMainNewStack(
 
     usb::xhci::Initialize(); // xHCの初期化 
 
-
+ 
 
     // logger->set_level(logging::kERROR); // 例外ハンドラ内でsvprintfを使用しないためにフィルターを強める
 

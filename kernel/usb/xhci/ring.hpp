@@ -6,14 +6,8 @@
 #include "registers.hpp"
 #include "../memory.hpp" 
  
-namespace usb::xhci
-{
-    //  Ringの大きさに応じてmallocするのを実装するのはめんどくさいので、
-    //  予め最大数を定めておき、classの中で確保しておく。
-    // const uint32_t kMaxRingSize = 100;
-    const uint32_t kEventRingSegmentTableSize = 1;
-
-
+namespace usb::xhci 
+{    
     //  Command/Transfer Ringのクラス
     //  サイクルビットやエンキューポインタの値を保持するため、
     //  リングにTRBを挿入する時に、それらを気にする必要はない。
@@ -34,8 +28,10 @@ namespace usb::xhci
         //  LinkTRBの指すアドレスへ、エンキューポインタを進める。
         //  LinkTRBのtoggle_bitが１を示していたら、cycle_bit_も内部で変更しておく。
         //  サイクルビットを指定する必要はない。
-        template <typename TRBType>
-        TRB *Push(TRBType *trb);
+        template <typename TRBType> // templateはヘッダファイルに実装しなければならない
+        TRB *Push(TRBType *trb) {
+            return Push_(reinterpret_cast<TRB *>(trb));
+        }
 
         //  リングバッファの先頭アドレス
         void *Buffer();
@@ -47,9 +43,7 @@ namespace usb::xhci
         uint32_t ring_size_;    //  Ringに収まるTRBの数
         TRB *ring_buf_;         //  ringのメモリ領域の先頭アドレスを定義
 
-        //  trb_ptrで指されたポインタから１６バイト分を読み込み、
-        //  エンキューポインタの指す場所へコピーする。
-        TRB *Push16(char *trb_ptr);
+        TRB *Push_(TRB *trb); // TRBをリングへPushする
     };
 
 
@@ -66,18 +60,15 @@ namespace usb::xhci
     //  簡単のため、ERSTSZは１とする。
     struct EventRingSegmentTableEntry
     {
-        uint64_t : 6;   // reserved
-        //  イベントリングセグメントのベースアドレスを指すポインタ。
-        //  イベントリングセグメントは、６４バイトでアラインメントされているので、
-        //  使うときには、左に６ビットシフトする必要がある。
-        //  格納するときには、右に６ビットシフトする。
-        uint64_t ring_segment_base_address : 58;
-        //  イベントリングのサイズ（格納できるTRBの数）。
-        //  この値は、１６以上４０９６未満である必要がある。
+        uint64_t ring_segment_base_address; // ６４バイトアラインメント
         uint64_t ring_segment_size : 16;
-        uint64_t : 48;    // reserved
-    };
+        uint64_t : 48;
+    } __attribute__((packed));
     
+    //  Ringの大きさに応じてmallocするのを実装するのはめんどくさいので、
+    //  予め最大数を定めておき、classの中で確保しておく。
+    // const uint32_t kMaxRingSize = 100;
+    const uint32_t kEventRingSegmentTableSize = 1;
 
     //  注意点
     //  Popという関数があるが、これはデキューポインタを１進めるだけの命令であり、
@@ -93,19 +84,14 @@ namespace usb::xhci
         //  RuntimeRegisters->IP[0]へのポインタを渡せば良い。
         int Initialize(uint32_t ring_size, struct InterrupterRegisterSet *interrupter);
 
+        TRB* ReadDequeuePointer() const; //  現在のデキューポインタを返す。
 
-        //  デキューポインタが指しているTRBのサイクルビットが自身の状態と等しい時はtrue
-        //  を返す関数。サイクルビットが等しい時、それはまだ読み出していないTRBであることを示唆する。
-        bool HasFront()
-        {
-            // return ReadDequeuePointer()->cycle_bit == cycle_bit_;
-            return 1;
-        }
+        void WriteDequeuePointer(TRB *ptr); // デキューポインタの値を更新する。
 
-        //  次のTRBへのポインタを返す関数。
-        TRB *Front()
-        {
-            return ReadDequeuePointer();
+        //  デキューポインタが指しているTRBのサイクルビットが自身の状態と等しい時はtrueを返す。
+        //  サイクルビットが等しい時、それはまだ読み出していないTRBであることを示唆する。
+        bool HasFront() const {
+            return ReadDequeuePointer()->bits.cycle_bit == cycle_bit_;
         }
 
         //  デキューポインタを一つ進める。
@@ -115,26 +101,17 @@ namespace usb::xhci
         //  最後尾の判定は、Segment Sizeでも可能であるが、xHCがLink TRBをおいてくれるはずなので、
         //  それに従っても良い。
         void Pop();
-
-        //  現在のデキューポインタの値を取り出し、TRBのポインタにキャストして返す関数。
-        TRB* ReadDequeuePointer();
     
     private:
         bool cycle_bit_;
 
-        //  ただ一つのイベントリングセグメントのベースアドレス
-        TRB *ring_;
-        //  リングセグメントの大きさ（kMaxRingSize以下である必要がある）。
-        uint32_t ring_size_;
+        TRB *ring_; // Event Ring Segment Address
+        uint32_t ring_size_; // Segment Size
 
         EventRingSegmentTableEntry *erst_;
 
         //  ランタイムレジスタ内のIRの先頭ポインタ
         struct InterrupterRegisterSet *interrupter_;
-
-        //  イベントTRBを読み込んだ回数を記録する。デバッグ用。
-        int event_count = 0;
-
     };
 
 }

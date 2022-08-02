@@ -91,6 +91,27 @@ namespace usb::xhci
         }
     };
 
+    //  TRB Typeは２３
+    //  Command Ringの操作を検証するための手段を提供してくれる
+    union NoOpCommandTRB
+    {
+        static const uint32_t Type = 23;
+        uint32_t data[4];
+        struct {
+            uint32_t : 32;
+            uint32_t : 32;
+            uint32_t : 32;
+
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+            uint32_t : 16;  //  reserved
+        } __attribute__((packed)) bits;
+
+        NoOpCommandTRB() : data{} {
+            bits.trb_type = Type;
+        }
+    } __attribute__((packed));
 
 
     /* 
@@ -311,19 +332,6 @@ namespace usb::xhci
 
 //  COMMAND TRB
 
-    //  TRB Typeは２３
-    //  Command Ringの操作を検証するための手段を提供してくれる
-    struct NoOpCommandTRB
-    {
-        uint32_t : 32;  //  reserved
-        uint32_t : 32;  //  reserved
-        uint32_t : 32;  //  reserved
-
-        volatile uint32_t cycle_bit : 1;
-        uint32_t : 9;  //  reserved
-        volatile uint32_t trb_type : 6;
-        uint32_t : 16;  //  reserved
-    };
 
     //  TRB Typeは９
     //  xHCに利用可能なデバイススロットを選んでもらい、

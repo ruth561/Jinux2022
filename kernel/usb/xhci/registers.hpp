@@ -1,14 +1,14 @@
 #pragma once
 
 #include <stdint.h>
+#include <array>
 
 #include "context.hpp" 
 #include "ring.hpp"
 
 namespace usb::xhci
 {
-/* ========== Capability Registers ========== */
-
+/////////////////////// Capability Registers ///////////////////////
     union HCSPARAMS1_Bitmap
     {
         uint32_t data[1];
@@ -84,7 +84,7 @@ namespace usb::xhci
 
 
 
-/* ========== Operational Registers ========== */
+/////////////////////// Operational Registers ///////////////////////
     union USBCMD_Bitmap
     {
         uint32_t data[1];
@@ -150,19 +150,19 @@ namespace usb::xhci
         uint64_t data[1];
         struct {
             volatile uint64_t ring_cycle_state : 1;
-            volatile uint64_t command_stop : 1;
-            volatile uint64_t command_abort : 1;
-            volatile uint64_t command_ring_running : 1;
+            volatile uint64_t command_stop : 1; // RW1S
+            volatile uint64_t command_abort : 1; // RW1S
+            volatile uint64_t command_ring_running : 1; // RO
             uint64_t : 2;
             volatile uint64_t command_ring_pointer : 58;
         } __attribute__((packed)) bits;
 
-        uint64_t Pointer() const {
-            return bits.command_ring_pointer << 6;
+        void *Pointer() const {
+            return reinterpret_cast<void *>(bits.command_ring_pointer << 6);
         }
 
-        void SetPointer(uint64_t value) {
-            bits.command_ring_pointer = value >> 6;
+        void SetPointer(void *p) {
+            bits.command_ring_pointer = reinterpret_cast<uint64_t>(p) >> 6;
         }
     } __attribute__((packed));
 
@@ -201,7 +201,7 @@ namespace usb::xhci
         uint32_t PAGESIZE; // RO
         uint32_t reserved1[2];
         uint32_t DNCTRL; // RW
-        CRCR_Bitmap CRCR; // RW
+        CRCR_Bitmap CRCR; // RO, RW, RW1S
         uint32_t reserved2[4];
         DCBAAP_Bitmap DCBAAP; // RW
         CONFIG_Bitmap CONFIG; // RW
@@ -307,98 +307,141 @@ namespace usb::xhci
     };
 
 
-
-
-
-
-    /* ======================== Runtime Registersのメンバ変数が取る構造体など ========================== */
-
-    //  割り込みが有効かどうか、割り込み街かどうかを設定する。
-    struct IMAN_Bitmap
+/////////////////////// Runtime Registers ///////////////////////
+    struct MFINDEX_Bitmap
     {
-        volatile uint32_t IP : 1;                    // このbitが立っている時、割り込み待ち状態であることを示す。
-        volatile uint32_t IE : 1;                    // このbitが立っている時、割り込みが有効であることを示す。
-        uint32_t reserved : 30;
-    };
+        volatile uint32_t microframe_index: 14; // 現在のmicroframe(✕125μs)
+    } __attribute__((packed));
+
+    union IMAN_Bitmap // 割り込みの有効・無効など
+    {
+        uint32_t data[1];
+        struct {
+            volatile uint32_t interrupt_pending : 1; // RW1C, このbitが立っている時、割り込み待ち状態であることを示す。
+            volatile uint32_t interrupt_enable : 1; // RW, このbitが立っている時、割り込みが有効であることを示す。
+            uint32_t : 30;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
+
+    union IMOD_Bitmap // 割り込みペースの設定
+    {
+        uint32_t data[1];
+        struct {
+            // 割り込みの間隔を設定（✕250μs）
+            // default: 4000　すなわち１秒
+            volatile uint32_t interrupt_moderation_interval : 16;
+            volatile uint32_t interrupt_moderation_counter : 16;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
     
-    //  割り込みの設定の調整を行うレジスタ。ソフトウェアはこのレジスタを用いて、
-    //  CPUへの割り込みのペースを設定する。この値が大きければ大きいほど、一秒間あたりの割り込み数は増える。
-    struct IMOD_Bitmap
+    union ERSTSZ_Bitmap 
     {
-        volatile uint32_t IMODI : 16;    // 割り込みのインターバルの設定。デフォルトは4000(0xfa0)となっている。
-        volatile uint32_t IMODC : 16;
-    };
-    
-    struct ERSTSZ_Bitmap
-    {
-        //  イベントリングセグメントテーブルのサイズを定義
-        //  この値は、デフォルトでは0となっており、ソフトウェアが設定できる。
-        //  この値の上限は決められており、それは
-        //  CapabilityRegisters->HCSPARAMS2内の要素で定義されている。 
-        volatile uint32_t event_ring_segment_table_size : 16;
-        uint32_t : 16;  // reserved
-    };
-    
-    struct ERSTBA_Bitmap
-    {
-        uint64_t : 6;   // reserved
-        //  イベントリングセグメントテーブルの先頭アドレスを定義。
-        //  使う時は、左へ６ビットシフトする必要がある。
-        //  格納する時は、右へ６ビットシフトする。つまり、
-        //  イベントリングセグメントテーブルは、６４バイトでアラインメントされている必要がある。
-        volatile uint64_t event_ring_segment_table_base_address : 58;
-    };
+    //  イベントリングセグメントテーブルのサイズを定義
+    //  この値は、デフォルトでは0となっており、ソフトウェアが設定できる。
+    //  この値の上限は決められており、それは
+    //  CapabilityRegisters->HCSPARAMS2内の要素で定義されている。 
+        uint32_t data[1];
+        struct {
+            volatile uint32_t event_ring_segment_table_size : 16;
+            uint32_t : 16;
+        } __attribute__((packed)) bits;
 
-    //  イベントリングのデキューポインタ
-    struct ERDP_Bitmap
-    {
-        volatile uint64_t dequeue_erst_segment_index : 3;
-        volatile uint64_t event_handler_busy : 1;
-        volatile uint64_t event_ring_dequeue_pointer : 60;       // 使用するときに4bit左にシフトする必要がある
-    };
-    
+        uint16_t Size() const {
+            return bits.event_ring_segment_table_size;
+        }
 
+        void SetSize(uint16_t value) {
+            bits.event_ring_segment_table_size = value;
+        }
+    } __attribute__((packed));
+
+    union ERSTBA_Bitmap // Event Ringのセグメントテーブルの先頭アドレス
+    {
+        uint64_t data[1];
+        struct {
+            uint64_t : 6;
+            volatile uint64_t event_ring_segment_table_base_address : 58;
+        } __attribute__((packed)) bits;
+
+        void *Pointer() const {
+            return reinterpret_cast<void *>(bits.event_ring_segment_table_base_address << 6);
+        }
+
+        void SetPointer(void *value) {
+            bits.event_ring_segment_table_base_address = reinterpret_cast<uint64_t>(value) >> 6;
+        }
+    } __attribute__((packed));
+
+    union ERDP_Bitmap // Event Ringのデキューポインタ
+    {
+        uint64_t data[1];
+        struct {
+            volatile uint64_t dequeue_erst_segment_index : 3;
+            volatile uint64_t event_handler_busy : 1; // RW1C
+            volatile uint64_t event_ring_dequeue_pointer : 60;
+        } __attribute__((packed)) bits;
+
+        void *Pointer() const {
+            return reinterpret_cast<void *>(bits.event_ring_dequeue_pointer << 4);
+        }
+
+        void SetPointer(void *p) { // Event Handler Busyをクリアしないようにマスクする
+            ERDP_Bitmap erdp;
+            erdp.data[0] = 0;
+            erdp.bits.dequeue_erst_segment_index = bits.dequeue_erst_segment_index;
+            erdp.bits.event_ring_dequeue_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+            data[0] = erdp.data[0];
+        }
+    } __attribute__((packed));
+    
     struct InterrupterRegisterSet 
     {
-        IMAN_Bitmap IMAN;
-        IMOD_Bitmap IMOD;
-        ERSTSZ_Bitmap ERSTSZ;
+        IMAN_Bitmap IMAN; // RW, RW1C
+        IMOD_Bitmap IMOD; // RW
+        ERSTSZ_Bitmap ERSTSZ; // RW
         uint32_t reserved;
-        ERSTBA_Bitmap ERSTBA;
-        ERDP_Bitmap ERDP;
+        ERSTBA_Bitmap ERSTBA; // RW
+        ERDP_Bitmap ERDP; // RW, RW1C
     };
-
 
     struct RuntimeRegisters
     {
-        uint32_t MFINDEX;
+        uint32_t MFINDEX; // RO
         uint32_t reserved[7];
         InterrupterRegisterSet IR[1024];
     };
 
 
-
-
-
-
-    /* ========== DoorBellRegisters ========== */
+/////////////////////// Doorbell Registers ///////////////////////
     //  ドアベルレジスタの構造体。
     //  値の読み書きをする時は、DWORDアクセスでなければならないらしい。
-    struct Doorbell_Bitmap
+    union Doorbell_Bitmap
     {
-        //  エンドポイントの番号を指定する。（１〜３１）
-        //  コマンドリングへのドアベルの場合、ここの値は０とする。
-        volatile uint32_t db_target : 8;        
-        uint32_t : 8;   //  reserved
-        //  ストリームID（よく分からん）
-        //  コマンドドアベルの場合は、この領域は０でクリアする。
-        volatile uint32_t db_stream_id : 16;
-    };
+        volatile uint32_t data[1];
+        struct {
+            //  エンドポイントの番号を指定する。（１〜３１）
+            //  コマンドリングへのドアベルの場合、ここの値は０とする。
+            volatile uint32_t db_target : 8;        
+            uint32_t : 8;   //  reserved
+            //  ストリームID（よく分からん）
+            //  コマンドドアベルの場合は、この領域は０でクリアする。
+            volatile uint32_t db_stream_id : 16;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
 
-    struct DoorbellRegisters
+    class DoorbellRegister
     {
-        Doorbell_Bitmap doorbell[256];
-    };
+    public:
+        void Ring(uint8_t target, uint16_t stream_id) {
+            Doorbell_Bitmap value{};
+            value.data[0] = 0;
+            value.bits.db_target = target;
+            value.bits.db_stream_id = stream_id; 
+            reg_.data[0] = value.data[0];
+        }
+    private:
+        Doorbell_Bitmap reg_;
+    }; 
     
     
 }

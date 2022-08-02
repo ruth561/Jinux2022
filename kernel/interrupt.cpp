@@ -5,6 +5,7 @@
 #include "logging.hpp"
 #include "message.hpp"
 #include "memory_manager.hpp"
+#include "usb/xhci/xhci.hpp"
 
 extern logging::Logger *logger;
 extern TimerManager *timer_manager;
@@ -71,11 +72,15 @@ void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 }
 
 
+namespace usb::xhci { extern Controller *xhc; }
 // XHCIの割り込みハンドラ
 __attribute__((interrupt)) 
 void IntHandlerXHCI(InterruptFrame *frame)
 {
     printk("[!-- INTERRUPT --!] xHCI\n");
+    while (usb::xhci::xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
+        usb::xhci::xhc->PrimaryEventRing()->Pop();
+    }
     NotifyEndOfInterrupt();
 }
 
