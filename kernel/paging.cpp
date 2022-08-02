@@ -19,7 +19,7 @@ namespace
     const uint64_t kPageSize1G = 1024 * 1024 * 1024;
 
     // ページングの最大の大きさをGBで指定する。
-    const size_t kPageDirectoryCount = 300;
+    const size_t kPageDirectoryCount = 260;
 
     alignas(4096) std::array<uint64_t, 512> pml4_table;
     alignas(4096) std::array<uint64_t, 512> pdp_table;

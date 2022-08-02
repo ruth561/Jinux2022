@@ -5,7 +5,7 @@
 extern logging::Logger *logger;
 namespace
 {
-    using namespace pci;
+    using namespace pci; 
 
     uint16_t ReadVendorID(uint8_t bus, uint8_t dev, uint8_t func)
     {
@@ -103,8 +103,6 @@ namespace pci
     }
 
 
-    // devがMSIに対応していたら、現在稼働中のCPUに割り込みをするように設定する。
-    // 成功時０、失敗時−１を返す。
     int ConfigureMSI(Device *dev)
     {
         for (auto cap = dev->capability_list.begin(); cap != dev->capability_list.end(); cap++) {
@@ -182,13 +180,6 @@ void InitializePCI()
             dev->bus, dev->device, dev->function, dev->base_class, dev->sub_class, dev->interface);
         for (auto cap = dev->capability_list.begin(); cap != dev->capability_list.end(); cap++) {
             logger->info("           CAPABILITY_ID: %02hhxH\n", cap->id);
-        }
-
-        if (dev->base_class == 0x0c && dev->sub_class == 0x03 && dev->interface == 0x30) {
-            logger->debug("USB3.0 HOST CONTROLLER!!\n");
-            if (ConfigureMSI(&*dev)) {
-                logger->error("Failed to configure MSI.\n");
-            }
         }
     }
 

@@ -20,6 +20,8 @@
 #include "run_application.hpp"
 #include "syscall.hpp"
 #include "pci.hpp"
+#include "usb/xhci/xhci.hpp"
+
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -33,7 +35,7 @@ TimerManager *timer_manager; // LAPICタイマーの管理をするもの。
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024]; // カーネル用スタック領域
 char logger_buf[sizeof(logging::Logger)]; // ロガー用領域
-logging::Logger *logger;
+logging::Logger *logger; 
 
 
 extern "C" void KernelMainNewStack(
@@ -60,12 +62,14 @@ extern "C" void KernelMainNewStack(
     InitializeLocalAPICTimer(); // タイマの設定
     InitializeTask(); // マルチタスクの開始
     Task *main_task = task_manager->CurrentTask();
+    InitializeSyscall(); // システムコールを使用可能にする
 
 
-    logger->set_level(logging::kINFO); // 出力減らす
+    // logger->set_level(logging::kINFO); // 出力減らす
     InitializePCI();
 
-    InitializeSyscall(); // システムコールを使用可能にする
+    usb::xhci::Initialize(); // xHCの初期化 
+
 
 
     // logger->set_level(logging::kERROR); // 例外ハンドラ内でsvprintfを使用しないためにフィルターを強める

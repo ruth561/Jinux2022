@@ -33,15 +33,6 @@ namespace pci
     };
 
 
-    // 指定したPCIコンフィギュレーション空間に32bitのdataを書き込む
-    // offsetは４の倍数
-    void ConfigWrite32(uint32_t data, uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
-
-    // 指定したPCIコンフィギュレーション空間から32bit分読み出す
-    // offsetは４の倍数
-    uint32_t ConfigRead32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
-
-
     union MSIMessageControl
     {
         uint16_t data;
@@ -55,8 +46,18 @@ namespace pci
         } bits;
     };
 
+    // 指定したPCIコンフィギュレーション空間に32bitのdataを書き込む
+    // offsetは４の倍数
+    void ConfigWrite32(uint32_t data, uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
 
-    
+    // 指定したPCIコンフィギュレーション空間から32bit分読み出す
+    // offsetは４の倍数
+    uint32_t ConfigRead32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset);
+
+    // devがMSIに対応していたら、現在稼働中のCPUに割り込みをするように設定する。
+    // 成功時０、失敗時−１を返す。
+    int ConfigureMSI(Device *dev);
+
 
 
     
