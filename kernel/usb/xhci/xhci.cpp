@@ -92,6 +92,7 @@ namespace usb::xhci
 
         // 割り込みの設定
         primary_interrupt->IMOD.bits.interrupt_moderation_interval = 4000;
+        // primary_interrupt->IMOD.bits.interrupt_moderation_counter = 10; // この設定はなくていい？
         primary_interrupt->IMAN.bits.interrupt_pending = true;
         primary_interrupt->IMAN.bits.interrupt_enable = true;
         opt_->USBCMD.bits.interrupter_enable = true;
@@ -118,6 +119,11 @@ namespace usb::xhci
         return &er_;
     }
 
+    InterrupterRegisterSet *Controller::PrimaryInterruptRegs()
+    {
+        return &run_->IR[0];
+    }
+
     void Controller::SendNoOpCommand()
     {
         NoOpCommandTRB trb = NoOpCommandTRB();
@@ -133,7 +139,7 @@ namespace usb::xhci
 
     // カーネルから呼び出される関数
     // PCIの初期化を行った後に呼び出す必要がある
-    // グローバルなxhcにControllerのオブジェクトを作り、初期化等をする。
+    // グローバルなxhcにControllerのオブジェクトを作り、初期化をする。
     void Initialize()
     {
         pci::Device *xhc_dev = pci::FindXHC();
@@ -154,22 +160,10 @@ namespace usb::xhci
 
         xhc->Run();
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 5; i++) {
             xhc->SendNoOpCommand();
         }
 
-        while (xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
-            xhc->PrimaryEventRing()->Pop();
-        }
 
-        for (int i = 0; i < 20; i++) {
-            xhc->SendNoOpCommand();
-        }
-
-        while (xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
-            xhc->PrimaryEventRing()->Pop();
-        }
-
- 
     }
 }

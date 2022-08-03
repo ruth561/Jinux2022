@@ -8,6 +8,7 @@
 
 namespace usb::xhci
 {
+
 /////////////////////// Capability Registers ///////////////////////
     union HCSPARAMS1_Bitmap
     {
@@ -19,7 +20,6 @@ namespace usb::xhci
             volatile uint32_t max_ports : 8;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     union HCSPARAMS2_Bitmap
     {
         uint32_t data[1];
@@ -32,7 +32,6 @@ namespace usb::xhci
             volatile uint32_t max_scratchpad_buffers_low : 5;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     union HCSPARAMS3_Bitmap
     {
         uint32_t data[1];
@@ -42,7 +41,6 @@ namespace usb::xhci
             volatile uint32_t u2_device_eixt_latency : 16;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     union DBOFF_Bitmap
     {
         uint32_t data[1];
@@ -53,7 +51,6 @@ namespace usb::xhci
 
         uint32_t Offset() const { return bits.doorbell_array_offset << 2; }
     } __attribute__((packed));
-
     union RTSOFF_Bitmap
     {
         uint32_t data[1];
@@ -64,7 +61,6 @@ namespace usb::xhci
 
         uint32_t Offset() const { return bits.runtime_register_space_offset << 5; }
     } __attribute__((packed));
-
     struct CapabilityRegisters
     {
         uint8_t CAPLENGTH; // RO
@@ -78,10 +74,6 @@ namespace usb::xhci
         RTSOFF_Bitmap RTSOFF; // RO
         uint32_t HCCPARAMS2; // RO
     } __attribute__((packed));
-
-
-
-
 
 
 /////////////////////// Operational Registers ///////////////////////
@@ -118,7 +110,6 @@ namespace usb::xhci
             uint32_t : 18;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     union USBSTS_Bitmap
     {
         // RW1C属性が混ざっているので注意が必要
@@ -144,7 +135,6 @@ namespace usb::xhci
             uint32_t : 19;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     union CRCR_Bitmap
     {
         uint64_t data[1];
@@ -165,7 +155,6 @@ namespace usb::xhci
             bits.command_ring_pointer = reinterpret_cast<uint64_t>(p) >> 6;
         }
     } __attribute__((packed));
-
     union DCBAAP_Bitmap
     {
         uint64_t data[1];
@@ -182,7 +171,6 @@ namespace usb::xhci
             bits.device_context_base_address_array_pointer = reinterpret_cast<uint64_t>(p) >> 6;
         }
     } __attribute__((packed));
-
     union CONFIG_Bitmap
     {
         uint32_t data[1];
@@ -193,7 +181,6 @@ namespace usb::xhci
             uint32_t : 22;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-    
     struct OperationalRegisters
     {
         USBCMD_Bitmap USBCMD; // RO, RW
@@ -206,18 +193,6 @@ namespace usb::xhci
         DCBAAP_Bitmap DCBAAP; // RW
         CONFIG_Bitmap CONFIG; // RW
     };
-
-    
-
-
-
-
-
-
-
-
-
-
 
 
 /* ==================== Port Status and Control Register ==================== */
@@ -312,7 +287,6 @@ namespace usb::xhci
     {
         volatile uint32_t microframe_index: 14; // 現在のmicroframe(✕125μs)
     } __attribute__((packed));
-
     union IMAN_Bitmap // 割り込みの有効・無効など
     {
         uint32_t data[1];
@@ -322,7 +296,6 @@ namespace usb::xhci
             uint32_t : 30;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     union IMOD_Bitmap // 割り込みペースの設定
     {
         uint32_t data[1];
@@ -333,7 +306,6 @@ namespace usb::xhci
             volatile uint32_t interrupt_moderation_counter : 16;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-    
     union ERSTSZ_Bitmap 
     {
     //  イベントリングセグメントテーブルのサイズを定義
@@ -354,7 +326,6 @@ namespace usb::xhci
             bits.event_ring_segment_table_size = value;
         }
     } __attribute__((packed));
-
     union ERSTBA_Bitmap // Event Ringのセグメントテーブルの先頭アドレス
     {
         uint64_t data[1];
@@ -371,7 +342,6 @@ namespace usb::xhci
             bits.event_ring_segment_table_base_address = reinterpret_cast<uint64_t>(value) >> 6;
         }
     } __attribute__((packed));
-
     union ERDP_Bitmap // Event Ringのデキューポインタ
     {
         uint64_t data[1];
@@ -385,15 +355,16 @@ namespace usb::xhci
             return reinterpret_cast<void *>(bits.event_ring_dequeue_pointer << 4);
         }
 
-        void SetPointer(void *p) { // Event Handler Busyをクリアしないようにマスクする
+        void SetPointer(void *p) {
+            // ERDPへ書き込む時にEHBフラグをクリアする必要がある。
+            // EHBフラグの属性はRW1Cなため、１が立っている所へ１を書き込むことで０クリアされる。
+            // したがって、現在の値をそのまま流用すれば良い。
             ERDP_Bitmap erdp;
-            erdp.data[0] = 0;
-            erdp.bits.dequeue_erst_segment_index = bits.dequeue_erst_segment_index;
+            erdp.data[0] = data[0];
             erdp.bits.event_ring_dequeue_pointer = reinterpret_cast<uint64_t>(p) >> 4;
             data[0] = erdp.data[0];
         }
     } __attribute__((packed));
-    
     struct InterrupterRegisterSet 
     {
         IMAN_Bitmap IMAN; // RW, RW1C
@@ -403,7 +374,6 @@ namespace usb::xhci
         ERSTBA_Bitmap ERSTBA; // RW
         ERDP_Bitmap ERDP; // RW, RW1C
     };
-
     struct RuntimeRegisters
     {
         uint32_t MFINDEX; // RO
@@ -428,7 +398,6 @@ namespace usb::xhci
             volatile uint32_t db_stream_id : 16;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
     class DoorbellRegister
     {
     public:
@@ -442,6 +411,5 @@ namespace usb::xhci
     private:
         Doorbell_Bitmap reg_;
     }; 
-    
     
 }

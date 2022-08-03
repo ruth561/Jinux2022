@@ -78,6 +78,7 @@ __attribute__((interrupt))
 void IntHandlerXHCI(InterruptFrame *frame)
 {
     printk("[!-- INTERRUPT --!] xHCI\n");
+    // usb::xhci::xhc->PrimaryInterruptRegs()->IMAN.bits.interrupt_pending = 1; // ０クリアする必要ある？
     while (usb::xhci::xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
         usb::xhci::xhc->PrimaryEventRing()->Pop();
     }

@@ -24,6 +24,8 @@ namespace usb::xhci
 
         EventRing *PrimaryEventRing();
 
+        InterrupterRegisterSet *PrimaryInterruptRegs();
+
 
         void SendNoOpCommand(); //  コントローラーにNoOpCommandTRBを送りドアベルを鳴らす
     
