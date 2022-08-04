@@ -37,7 +37,7 @@ namespace usb::xhci
         return 0;
     }
 
-    void *Ring::Buffer() { 
+    TRB *Ring::Buffer() { 
         return ring_buf_;
     }
 
@@ -73,7 +73,7 @@ namespace usb::xhci
         return trb_ptr;
     }
 
-
+ 
 
 
 

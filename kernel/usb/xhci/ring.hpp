@@ -33,8 +33,7 @@ namespace usb::xhci
             return Push_(reinterpret_cast<TRB *>(trb));
         }
 
-        //  リングバッファの先頭アドレス
-        void *Buffer();
+        TRB *Buffer(); //  リングバッファの先頭アドレス
     
     private:
         bool cycle_bit_;        //  プロデューササイクルステート

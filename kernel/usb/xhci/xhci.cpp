@@ -293,7 +293,7 @@ namespace usb::xhci
             if (addressing_port == 0) return -1;
             if (port_id != addressing_port) return -1;
             if (port_config_phase[port_id] != ConfigPhase::kAddressingDevice) return -1;
-
+ 
             if (dev->DeviceContext()->endpoint_context[0].ep_state) {
                 printk("        EP0 RUNNING\n");
             }
@@ -452,54 +452,57 @@ namespace usb::xhci
     int Controller::AddressDevice(uint8_t port_id, uint8_t slot_id)
     {
         int res;
-        logger->debug("[AddressDev] port_id=%d, slot_id=%d\n", port_id, slot_id); */
+        logger->debug("[+] ADRESS DEVICE (PORT%02hhd, SLOT%02hhd)\n", port_id, slot_id);
 
         res = devmgr_.AllocDevice(slot_id, &doorbell_[slot_id]);
         if (res == -1) {
             printk("[DEBUG CTRer::AddressDev] FAILED!! AllocDevice\n");
             return -1;
         }
+        if (addressing_port != PortAt(port_id).Number()) {
+            logger->error("This Port Is Not Addressing Port\n");
+            return -1;
+        }
+
+        Device *device = devmgr_.FindBySlot(slot_id);
 
         //  2. InputControlContextのA０とA１を１にする。
-        SlotContext *slot_ctx = devmgr_.FindBySlot(slot_id)->InputContext()->EnableSlotContext();
-        EndpointContext *ep0_ctx = devmgr_.FindBySlot(slot_id)->InputContext()->EnableEndpoint(1);
+        SlotContext *slot_ctx = device->InputContextPtr()->EnableSlotContext();
+        EndpointContext *ep0_ctx = device->InputContextPtr()->EnableEndpoint(DeviceContextIndex{1});
 
         //  3. InputSlotContextを初期化。
         Port port = PortAt(addressing_port);
-        slot_ctx->root_hub_port_num = port.Number();
-        slot_ctx->route_string = 0;
-        slot_ctx->context_entries = 1;
-        slot_ctx->speed = port.Speed();     //  ここよく分かってない。
+        slot_ctx->bits.root_hub_port_num = port.Number();
+        slot_ctx->bits.route_string = 0;
+        slot_ctx->bits.context_entries = 1;
+        slot_ctx->bits.speed = port.Speed();     //  ここよく分かってない。
 
         //  4. EP０の初期化。
-        ep0_ctx->ep_type = 4;
-        ep0_ctx->max_packet_size = DetermineMaxPacketSizeForControlPipe(slot_ctx->speed);
-        ep0_ctx->max_burst_size = 0;
-        /*  EP０にTransfer Ringを作成し初期化する。
-            その後、Transfer Ringの先頭ポインタをTRDequePointerに書き込み、
-            リングの設定を完了する。 */
-        Ring *ep0_transfer_ring = devmgr_.FindBySlot(slot_id)->AllocTransferRing(1, 32);
-        ep0_ctx->tr_dequeue_pointer = ep0_transfer_ring->Buffer() >> 4;
-        ep0_ctx->dequeue_cycle_state = 1;
-        ep0_ctx->interval = 0;
-        ep0_ctx->max_primary_streams = 0;
-        ep0_ctx->mult = 0;
-        ep0_ctx->error_count = 3;
+        ep0_ctx->bits.ep_type = 4;
+        ep0_ctx->bits.max_packet_size = DetermineMaxPacketSizeForControlPipe(slot_ctx->bits.speed);
+        ep0_ctx->bits.max_burst_size = 0;
 
-        //  5. DCBAAにデバイスコンテキストを追加する。
+        //  5. デバイスのデフォルトコントロールパイプにTransferRingを作成し初期化
+        Ring *ep0_transfer_ring = device->AllocTransferRing(DeviceContextIndex{1}, 32);
+
+        //  6. EP０コンテキストにTransferRingのポインタを書き込む
+        ep0_ctx->SetTransferRingBuffer(ep0_transfer_ring->Buffer());
+        ep0_ctx->bits.dequeue_cycle_state = 1;
+        ep0_ctx->bits.interval = 0;
+        ep0_ctx->bits.max_primary_streams = 0;
+        ep0_ctx->bits.mult = 0;
+        ep0_ctx->bits.error_count = 3;
+
+        //  7. DCBAAにデバイスコンテキストを追加する。
         devmgr_.LoadDCBAA(slot_id);
 
         port_config_phase[port_id] = ConfigPhase::kAddressingDevice;
 
-        /*  Address Deviceコマンドの発行。 */
-        AddressDeviceCommandTRB addr_dev_cmd = {};
-        addr_dev_cmd.input_context_pointer = ((uint64_t) devmgr_.FindBySlot(slot_id)->InputContext()) >> 4;
-        addr_dev_cmd.slot_id = slot_id;
-        addr_dev_cmd.trb_type = 11;
+        //  8.  AddressDeviceCommandTRBの発行。
+        AddressDeviceCommandTRB addr_dev_cmd(device->InputContextPtr(), slot_id);
         cr_.Push(&addr_dev_cmd);
-
         RingCommandRing();
-        /* printk("[DEBUG] Ring Command Ring (AddressDevice)\n"); */
+
         return 0;
     }
 

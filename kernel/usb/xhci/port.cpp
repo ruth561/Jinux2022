@@ -82,3 +82,4 @@ namespace usb::xhci
         // logger->debug("[Port::ClearPortResetChange()] PRC=%d\n", port_reg_set_->PORTSC.bits.port_reset_change);
     }
 }
+ 

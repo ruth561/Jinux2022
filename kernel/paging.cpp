@@ -14,7 +14,7 @@ extern logging::Logger *logger;
 
 namespace
 {
-    const uint64_t kPageSize4K = 4096;
+    // const uint64_t kPageSize4K = 4096;
     const uint64_t kPageSize2M = 2 * 1024 * 1024;
     const uint64_t kPageSize1G = 1024 * 1024 * 1024;
 

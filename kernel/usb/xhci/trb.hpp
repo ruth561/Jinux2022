@@ -2,9 +2,12 @@
 
 #include <stdint.h>
 
-
+ 
 namespace usb::xhci
 {
+    // 循環参照を避けるため
+    struct InputContext;
+
 //////////////////////// TRB String ////////////////////////
     inline const char* kTRBCompletionCodeToName[37] = {
         "Invalid",
@@ -536,11 +539,11 @@ namespace usb::xhci
             bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
         }
 
-  /*       AddressDeviceCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
+        AddressDeviceCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
             bits.trb_type = Type;
             bits.slot_id = slot_id;
             SetPointer(input_context);
-        } */
+        }
     } __attribute__((packed));
 
     union ConfigureEndpointCommandTRB //  エンドポイントの帯域幅や必要な資源を評価する（よく分からん）

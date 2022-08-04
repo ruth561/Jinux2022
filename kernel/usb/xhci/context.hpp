@@ -1,10 +1,30 @@
 #pragma once
 
 #include <stdint.h>
+
 #include "trb.hpp"
 
 namespace usb::xhci
 {
+    struct DeviceContextIndex
+    {
+        uint8_t value;
+
+        explicit DeviceContextIndex(uint8_t dci) : 
+            value{dci} {}
+
+        DeviceContextIndex(uint8_t ep_num, bool dir_in) {
+            if (ep_num == 0) {
+                value = 1;
+            } else {
+                value = 2 * ep_num + dir_in;
+            }
+        }
+
+        DeviceContextIndex(const DeviceContextIndex& rhs) = default;
+        DeviceContextIndex& operator =(const DeviceContextIndex& rhs) = default;
+    };
+
     union SlotContext {
         uint32_t dwords[8];
         struct {
@@ -46,23 +66,7 @@ namespace usb::xhci
             volatile uint32_t slot_state : 5;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
-
-
-    struct DeviceContextIndex
-    {
-        unsigned int value;
-
-        explicit DeviceContextIndex(unsigned int dci)
-        : value{dci}
-        {}
-
-        DeviceContextIndex(unsigned int ep_num, bool dir_in)
-            : value{2 * ep_num + (ep_num == 0 ? 1 : dir_in)} {}
-
-        DeviceContextIndex(const DeviceContextIndex& rhs) = default;
-        DeviceContextIndex& operator =(const DeviceContextIndex& rhs) = default;
-    };
-
+ 
     union EndpointContext {
         uint32_t dwords[8];
         struct {
@@ -142,7 +146,6 @@ namespace usb::xhci
         }
     } __attribute__((packed));
 
-
     struct InputControlContext
     {
         //  これらの各ビットは、デバイスコンテキストの番号に対応しており、
@@ -167,7 +170,8 @@ namespace usb::xhci
         volatile uint8_t reserved2;
     } __attribute__((packed));
     
-    struct InputContext {
+    struct InputContext 
+    {
         InputControlContext input_control_context;
         SlotContext slot_context;
         EndpointContext ep_contexts[31];
@@ -183,9 +187,9 @@ namespace usb::xhci
         //  dci（Device Context Index）で指定したエンドポイントをEnable状態にする。
         //  具体的には、InputContorolContextのadd_context_flagの第dciビットを１にする関数。
         //  エンドポイントを指定する必要があるため、１≦dci≦３１とする。
-        EndpointContext* EnableEndpoint(int dci) {
-            input_control_context.add_context_flags |= 1u << dci;
-            return &ep_contexts[dci - 1];
+        EndpointContext* EnableEndpoint(DeviceContextIndex dci) {
+            input_control_context.add_context_flags |= 1u << dci.value;
+            return &ep_contexts[dci.value - 1];
         }
     } __attribute__((packed));
 }
