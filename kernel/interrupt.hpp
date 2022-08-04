@@ -25,6 +25,7 @@ enum InterruptVector
 const int kISTForTimer = 1; 
 const int kISTForGP = 2;
 const int kISTForPF = 3;
+const int kISTForXHCI = 4;
 
 // IDTのエントリ
 struct InterruptDescriptor 

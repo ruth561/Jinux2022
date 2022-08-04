@@ -47,6 +47,22 @@ namespace usb::xhci
         } __attribute__((packed)) bits;
     } __attribute__((packed));
 
+
+    struct DeviceContextIndex
+    {
+        unsigned int value;
+
+        explicit DeviceContextIndex(unsigned int dci)
+        : value{dci}
+        {}
+
+        DeviceContextIndex(unsigned int ep_num, bool dir_in)
+            : value{2 * ep_num + (ep_num == 0 ? 1 : dir_in)} {}
+
+        DeviceContextIndex(const DeviceContextIndex& rhs) = default;
+        DeviceContextIndex& operator =(const DeviceContextIndex& rhs) = default;
+    };
+
     union EndpointContext {
         uint32_t dwords[8];
         struct {
@@ -116,11 +132,14 @@ namespace usb::xhci
         }
     } __attribute__((packed));
 
-
     struct DeviceContext
     {
         SlotContext slot_context;
         EndpointContext endpoint_context[31];
+
+        EndpointContext *GetEndpoint(DeviceContextIndex dci) {
+            return &endpoint_context[dci.value - 1];
+        }
     } __attribute__((packed));
 
 

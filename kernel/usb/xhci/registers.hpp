@@ -61,6 +61,7 @@ namespace usb::xhci
 
         uint32_t Offset() const { return bits.runtime_register_space_offset << 5; }
     } __attribute__((packed));
+
     struct CapabilityRegisters
     {
         uint8_t CAPLENGTH; // RO
@@ -181,6 +182,7 @@ namespace usb::xhci
             uint32_t : 22;
         } __attribute__((packed)) bits;
     } __attribute__((packed));
+    
     struct OperationalRegisters
     {
         USBCMD_Bitmap USBCMD; // RO, RW
@@ -192,94 +194,104 @@ namespace usb::xhci
         uint32_t reserved2[4];
         DCBAAP_Bitmap DCBAAP; // RW
         CONFIG_Bitmap CONFIG; // RW
-    };
+    } __attribute__((packed));
 
 
-/* ==================== Port Status and Control Register ==================== */
-
-    struct PORTSC_Bitmap
+/////////////////////// Port Register ///////////////////////
+// Operational Base + (0x400 + 0x10 * (n - 1))
+    union PORTSC_Bitmap
     {
-        //  default: 0
-        //  この値が１の時、デバイスがこのポートに接続されていることを示す。
-        //  port_powerが０の時、この値は必ず０になる。
-        volatile uint32_t current_connect_status : 1;
-        //  default: 0
-        //  １の時有効、０の時無効を表す。
-        //  ポートを有効にできるのはxHCだけである。（ソフトウェアがこの値を１にすることはできない。）
-        volatile uint32_t port_enabled_disabled : 1;
-        uint32_t : 1;
-        volatile uint32_t over_current_active : 1;
-        //  default: 0
-        //  ソフトウェアがこの値を０から１にセットすることで、
-        //  USBバスのリセット手続きが開始される？
-        volatile uint32_t port_reset : 1;
-        //  default:５
-        //  このフィールドに値を書き込むためには、LWS（port_link_state_write_strobe）
-        //  が１にセットされている必要がある。
-        //  読み出すときの値と書き込む値で少し変わっているので注意する。
-        volatile uint32_t port_link_state : 4;
-        //  default: １
-        //  この値が０の時、このポートは電源がオフ状態になっている。
-        //  この値が０から１に変わる時：
-        //  デバイスが接続されていなければ「Disconnected状態」になる。
-        //  デバイスが接続されていれば、「Polling状態（USB３の場合）」になる。
-        volatile uint32_t port_power : 1;
-        volatile uint32_t port_speed : 4;
-        volatile uint32_t port_indicator_control : 2;
-        //  default: ０
-        //  port_link_stateに書き込みを行うには、このフィールドが１にセットされている必要がある。
-        volatile uint32_t port_link_state_write_strobe : 1;
-        //  default: ０
-        volatile uint32_t connect_status_change : 1;
-        volatile uint32_t port_enabled_disabled_change : 1;
-        volatile uint32_t warm_port_reset_change : 1;
-        volatile uint32_t over_current_change : 1;
-        volatile uint32_t port_reset_change : 1;
-        volatile uint32_t port_link_state_change : 1;
-        volatile uint32_t port_config_error_change : 1;
-        volatile uint32_t cold_attach_status : 1;
-        volatile uint32_t wake_on_connect_enable : 1;
-        volatile uint32_t wake_on_disconnect_enable : 1;
-        volatile uint32_t wake_on_over_current_enable : 1;
-        uint32_t : 2;
-        volatile uint32_t device_removable : 1;
-        //  default: ０
-        //  USB３でのみ有効なフィールド。
-        //  ソフトウェアがこの値を１にセットすることで、ワームリセット手続きが開始される。
-        //  詳しくは、USB３の仕様書を確認。
-        volatile uint32_t warm_port_reset : 1;
-    };
+        volatile uint32_t data[1];
+        struct {
+            volatile uint32_t current_connect_status : 1; // ROS, １の時このポートにデバイスが接続されている
+            //  RW1CS, default: 0
+            //  １の時有効、０の時無効を表す。
+            //  ポートを有効にできるのはxHCだけである。（ソフトウェアがこの値を１にすることはできない。）
+            volatile uint32_t port_enabled_disabled : 1;
+            uint32_t : 1;
+            volatile uint32_t over_current_active : 1; // RO
+            //  RW1S, default: 0
+            //  ソフトウェアがこの値を０から１にセットすることで、
+            //  USBバスのリセット手続きが開始される？
+            volatile uint32_t port_reset : 1;
+            //  RWS, default:５
+            //  このフィールドに値を書き込むためには、LWS（port_link_state_write_strobe）
+            //  が１にセットされている必要がある。
+            //  読み出すときの値と書き込む値で少し変わっているので注意する。
+            volatile uint32_t port_link_state : 4;
+            //  PWS, default: １
+            //  この値が０の時、このポートは電源がオフ状態になっている。
+            //  この値が０から１に変わる時：
+            //  デバイスが接続されていなければ「Disconnected状態」になる。
+            //  デバイスが接続されていれば、「Polling状態（USB３の場合）」になる。
+            volatile uint32_t port_power : 1;
+            volatile uint32_t port_speed : 4;
+            volatile uint32_t port_indicator_control : 2;
+            //  default: ０
+            //  port_link_stateに書き込みを行うには、このフィールドが１にセットされている必要がある。
+            volatile uint32_t port_link_state_write_strobe : 1;
+            // default: ０
+            // このビットが１の時、CCSの値が変更したことを示す。
+            volatile uint32_t connect_status_change : 1;
+            volatile uint32_t port_enabled_disabled_change : 1;
+            volatile uint32_t warm_port_reset_change : 1;
+            volatile uint32_t over_current_change : 1;
+            volatile uint32_t port_reset_change : 1;
+            volatile uint32_t port_link_state_change : 1;
+            volatile uint32_t port_config_error_change : 1;
+            volatile uint32_t cold_attach_status : 1;
+            volatile uint32_t wake_on_connect_enable : 1;
+            volatile uint32_t wake_on_disconnect_enable : 1;
+            volatile uint32_t wake_on_over_current_enable : 1;
+            uint32_t : 2;
+            volatile uint32_t device_removable : 1;
+            //  default: ０
+            //  USB３でのみ有効なフィールド。
+            //  ソフトウェアがこの値を１にセットすることで、ワームリセット手続きが開始される。
+            //  詳しくは、USB３の仕様書を確認。
+            volatile uint32_t warm_port_reset : 1;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
 
-    struct PORTPMSC_Bitmap
+    union PORTPMSC_Bitmap
     {
-        volatile uint32_t u1_timeout : 8;
-        volatile uint32_t u2_timeout : 8;
-        volatile uint32_t force_link_pm_accept : 1;
-        uint32_t : 15;
-    };
+        volatile uint32_t data[1];
+        struct {
+            volatile uint32_t u1_timeout : 8;
+            volatile uint32_t u2_timeout : 8;
+            volatile uint32_t force_link_pm_accept : 1;
+            uint32_t : 15;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
     
-    struct PORTLI_Bitmap
+    union PORTLI_Bitmap
     {
-        volatile uint32_t link_error_count : 16;
-        volatile uint32_t rx_lane_count : 4;
-        volatile uint32_t tx_lane_count : 4;
-        uint32_t : 8;
-    };
+        volatile uint32_t data[1];
+        struct {
+            volatile uint32_t link_error_count : 16;
+            volatile uint32_t rx_lane_count : 4;
+            volatile uint32_t tx_lane_count : 4;
+            uint32_t : 8;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
     
-    struct PORTHLPMC_Bitmap
+    union PORTHLPMC_Bitmap
     {
-        volatile uint32_t host_initiated_resume_duration_mode : 2;
-        volatile uint32_t l1_timeout : 8;
-        volatile uint32_t best_effort_service_latency_deep : 4;
-        uint32_t : 18;
-    };
+        volatile uint32_t data[1];
+        struct {
+            volatile uint32_t host_initiated_resume_duration_mode : 2;
+            volatile uint32_t l1_timeout : 8;
+            volatile uint32_t best_effort_service_latency_deep : 4;
+            uint32_t : 18;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
     
     struct PortRegisterSet {
         PORTSC_Bitmap PORTSC;
         PORTPMSC_Bitmap PORTPMSC;
         PORTLI_Bitmap PORTLI;
         PORTHLPMC_Bitmap PORTHLPMC;
-    };
+    } __attribute__((packed));
 
 
 /////////////////////// Runtime Registers ///////////////////////
@@ -373,13 +385,14 @@ namespace usb::xhci
         uint32_t reserved;
         ERSTBA_Bitmap ERSTBA; // RW
         ERDP_Bitmap ERDP; // RW, RW1C
-    };
+    } __attribute__((packed));
+
     struct RuntimeRegisters
     {
         uint32_t MFINDEX; // RO
         uint32_t reserved[7];
         InterrupterRegisterSet IR[1024];
-    };
+    } __attribute__((packed));
 
 
 /////////////////////// Doorbell Registers ///////////////////////

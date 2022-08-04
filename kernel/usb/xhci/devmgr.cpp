@@ -12,9 +12,19 @@ namespace usb::xhci
         DCBAA_ = (DeviceContext **) usb::AllocMem(8 * (max_slots_ + 1), 64, 4096); // アラインメント・境界に注意
         memset(DCBAA_, 0, 8 * (max_slots_ + 1)); // DCBAA領域を０クリア
 
-        // devices_ = (Device **) usb::AllocMem(8 * (max_slots_ + 1), 0, 0);
-        // memset(devices_, 0, 8 * (max_slots_ + 1)); 
+        devices_ = (Device **) usb::AllocMem(8 * (max_slots_ + 1), 0, 0);
+        memset(devices_, 0, 8 * (max_slots_ + 1)); 
     }
+
+    void DeviceManager::DisableSlot(uint8_t slot_id)
+    {
+        devices_[slot_id] = NULL;
+        DCBAA_[slot_id] = NULL;
+
+        //  malloc関数が使えれば、デバイスコンテキストやインプットコンテキストの領域を
+        //  解放する必要がある。今回はやらないの。
+    }
+
 /* 
     Device *DeviceManager::FindByPort(uint8_t port_num)
     {
@@ -50,15 +60,6 @@ namespace usb::xhci
 
         devices_[slot_id]->Initialize();
         return 0;
-    }
-
-    void DeviceManager::DisableSlot(uint8_t slot_id)
-    {
-        devices_[slot_id] = NULL;
-        DCBAA_[slot_id] = NULL;
-
-        //  malloc関数が使えれば、デバイスコンテキストやインプットコンテキストの領域を
-        //  解放する必要がある。今回はやらないの。
     }
 
     int DeviceManager::LoadDCBAA(uint8_t slot_id)

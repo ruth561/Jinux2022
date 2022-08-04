@@ -65,8 +65,9 @@ extern "C" void KernelMainNewStack(
     InitializeSyscall(); // システムコールを使用可能にする
 
 
-    // logger->set_level(logging::kINFO); // 出力減らす
+    logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
+    logger->set_level(logging::kDEBUG); // 出力減らす
 
     usb::xhci::Initialize(); // xHCの初期化 
 
@@ -98,6 +99,9 @@ extern "C" void KernelMainNewStack(
             case Message::Type::kTimerTimeout:
                 logger->debug("Type: kTimerTimeout, Arg.timeout: %lx, Arg.value: %d\n", 
                     msg.arg.timer.timeout, msg.arg.timer.value);
+                break;
+            case Message::Type::kInterruptXHCI:
+                usb::xhci::ProcessEvents();
                 break;
             default:
                 break;

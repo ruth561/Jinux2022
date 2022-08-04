@@ -72,16 +72,12 @@ void PageFaultHandler(InterruptFrame *frame, uint64_t error_code_)
 }
 
 
-namespace usb::xhci { extern Controller *xhc; }
 // XHCIの割り込みハンドラ
 __attribute__((interrupt)) 
-void IntHandlerXHCI(InterruptFrame *frame)
+void IntHandlerXHCI(InterruptFrame *frame) 
 {
-    printk("[!-- INTERRUPT --!] xHCI\n");
-    // usb::xhci::xhc->PrimaryInterruptRegs()->IMAN.bits.interrupt_pending = 1; // ０クリアする必要ある？
-    while (usb::xhci::xhc->PrimaryEventRing()->HasFront()) { // イベントリングが空になるまで処理する。
-        usb::xhci::xhc->PrimaryEventRing()->Pop();
-    }
+    // printk("[!-- INTERRUPT --!] xHCI\n");
+    task_manager->SendMessage(1, Message{Message::Type::kInterruptXHCI});
     NotifyEndOfInterrupt();
 }
 
@@ -116,7 +112,7 @@ FaultHandlerWithError(GP)
 // FaultHandlerWithError(PF)
 FaultHandlerNoError(MF)
 FaultHandlerWithError(AC)
-FaultHandlerNoError(MC)
+FaultHandlerNoError(MC) 
 FaultHandlerNoError(XM)
 FaultHandlerNoError(VE)
 
@@ -134,7 +130,7 @@ void SetupInterruptDescriptorTable()
     SetIDTEntry(InterruptVector::kPageFault, reinterpret_cast<uintptr_t>(PageFaultHandler), cs, 14, kISTForPF); // 例外ハンドラだが、割り込みを受け付けないようにInterruptGateにしている。
 
     logger->info("Setting IDT[%02xh] kXHCI\n", InterruptVector::kXHCI); // xHCI
-    SetIDTEntry(InterruptVector::kXHCI, reinterpret_cast<uintptr_t>(IntHandlerXHCI), cs, 14, kISTForTimer);
+    SetIDTEntry(InterruptVector::kXHCI, reinterpret_cast<uintptr_t>(IntHandlerXHCI), cs, 14, kISTForXHCI);
 
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
     SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14, kISTForTimer);

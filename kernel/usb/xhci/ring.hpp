@@ -84,15 +84,13 @@ namespace usb::xhci
         //  RuntimeRegisters->IP[0]へのポインタを渡せば良い。
         int Initialize(uint32_t ring_size, struct InterrupterRegisterSet *interrupter);
 
-        TRB* ReadDequeuePointer() const; //  現在のデキューポインタを返す。
-
-        void WriteDequeuePointer(TRB *ptr); // デキューポインタの値を更新する。
-
         //  デキューポインタが指しているTRBのサイクルビットが自身の状態と等しい時はtrueを返す。
         //  サイクルビットが等しい時、それはまだ読み出していないTRBであることを示唆する。
         bool HasFront() const {
             return ReadDequeuePointer()->bits.cycle_bit == cycle_bit_;
         }
+
+        TRB *Front();
 
         //  デキューポインタを一つ進める。
         //  取り出した値を返したりなどはしない。ただ、進めるだけである。
@@ -104,14 +102,14 @@ namespace usb::xhci
     
     private:
         bool cycle_bit_;
+        TRB *ring_; // Event Ring Segmentのアドレス。簡単のため１個しか持たない。
+        uint32_t ring_size_; // Event Ring Segment Size
+        EventRingSegmentTableEntry *erst_; // Event Ring Segment Table
+        struct InterrupterRegisterSet *interrupter_; //  ランタイムレジスタ内のIRの先頭ポインタ
 
-        TRB *ring_; // Event Ring Segment Address
-        uint32_t ring_size_; // Segment Size
+        TRB* ReadDequeuePointer() const; //  現在のデキューポインタを返す。
 
-        EventRingSegmentTableEntry *erst_;
-
-        //  ランタイムレジスタ内のIRの先頭ポインタ
-        struct InterrupterRegisterSet *interrupter_;
+        void WriteDequeuePointer(TRB *ptr); // デキューポインタの値を更新する。
     };
 
 }

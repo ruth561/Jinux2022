@@ -5,6 +5,116 @@
 
 namespace usb::xhci
 {
+//////////////////////// TRB String ////////////////////////
+    inline const char* kTRBCompletionCodeToName[37] = {
+        "Invalid",
+        "Success",
+        "Data Buffer Error",
+        "Babble Detected Error",
+        "USB Transaction Error",
+        "TRB Error",
+        "Stall Error",
+        "Resource Error",
+        "Bandwidth Error",
+        "No Slots Available Error",
+        "Invalid Stream Type Error",
+        "Slot Not Enabled Error",
+        "Endpoint Not Enabled Error",
+        "Short Packet",
+        "Ring Underrun",
+        "Ring Overrun",
+        "VF Event Ring Full Error",
+        "Parameter Error",
+        "Bandwidth Overrun Error",
+        "Context State Error",
+        "No ping Response Error",
+        "Event Ring Full Error",
+        "Incompatible Device Error",
+        "Missed Service Error",
+        "Command Ring Stopped",
+        "Command Aborted",
+        "Stopped",
+        "Stopped - Length Invalid",
+        "Stopped - Short Packet",
+        "Max Exit Latency Too Large Error",
+        "Reserved",
+        "Isoch Buffer Overrun",
+        "Event Lost Error",
+        "Undefined Error",
+        "Invalid Stream ID Error",
+        "Secondary Bandwidth Error",
+        "Split Transaction Error",
+    };
+
+    inline const char* kTRBTypeToName[64] = {
+        "Reserved",                             // 0
+        "Normal",
+        "Setup Stage",
+        "Data Stage",
+        "Status Stage",
+        "Isoch",
+        "Link",
+        "EventData",
+        "No-Op",                                // 8
+        "Enable Slot Command",
+        "Disable Slot Command",
+        "Address Device Command",
+        "Configure Endpoint Command",
+        "Evaluate Context Command",
+        "Reset Endpoint Command",
+        "Stop Endpoint Command",
+        "Set TR Dequeue Pointer Command",       // 16
+        "Reset Device Command",
+        "Force Event Command",
+        "Negotiate Bandwidth Command",
+        "Set Latency Tolerance Value Command",
+        "Get Port Bandwidth Command",
+        "Force Header Command",
+        "No Op Command",
+        "Reserved",                             // 24
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Transfer Event",                       // 32
+        "Command Completion Event",
+        "Port Status Change Event",
+        "Bandwidth Request Event",
+        "Doorbell Event",
+        "Host Controller Event",
+        "Device Notification Event",
+        "MFINDEX Wrap Event",
+        "Reserved",                             // 40
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Vendor Defined",                       // 48
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",                       // 56
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+        "Vendor Defined",
+    };
+
+
+
     // 全てのTRBが取る大まかな構造。
     // TRBクラスは全てuint32_t data[4]という全体へアクセスする
     // ものを持っている。
@@ -20,6 +130,10 @@ namespace usb::xhci
             uint32_t trb_type : 6;
             uint32_t control : 16;
         } __attribute__((packed)) bits;
+
+        const char *TypeString() {
+            return kTRBTypeToName[bits.trb_type];
+        }
     };
 
     //  TRB Typeは６
@@ -91,27 +205,7 @@ namespace usb::xhci
         }
     };
 
-    //  TRB Typeは２３
-    //  Command Ringの操作を検証するための手段を提供してくれる
-    union NoOpCommandTRB
-    {
-        static const uint32_t Type = 23;
-        uint32_t data[4];
-        struct {
-            uint32_t : 32;
-            uint32_t : 32;
-            uint32_t : 32;
 
-            volatile uint32_t cycle_bit : 1;
-            uint32_t : 9;
-            volatile uint32_t trb_type : 6;
-            uint32_t : 16;  //  reserved
-        } __attribute__((packed)) bits;
-
-        NoOpCommandTRB() : data{} {
-            bits.trb_type = Type;
-        }
-    } __attribute__((packed));
 
 
     /* 
@@ -244,84 +338,104 @@ namespace usb::xhci
     };
     
 
-    //  TRB Typeは３２
-    struct TransferEventTRB
-    {
-        //  このイベントを生成したTRBのポインタを格納する。
-        uint64_t trb_pointer : 64;
-
-        //  TRBで転送したデータ長に関する値。
-        //  TRBがOUTの場合：TRBのLength（転送しようとしたデータのサイズ）から
-        //  実際に転送に成功したデータのサイズを引いた値が格納される。全てのデータが転送に成功したら、
-        //  この値は、０を示すようになる。
-        //  TRBがINの場合：TRBのLength（受信しようとしたデータのサイズ）から
-        //  実際に受信に成功したデータのサイズを引いた値が格納される。全てのデータが転送に成功したら、
-        //  この値は、０を示すようになる。特に、用意したデータ領域が受信するデータの起きさよりも大きい場合、
-        //  COMPLETION CODEは「Short Packet」を示し、その差（バイト）がここに格納される。
-        //  エラーで終了した場合、用意したバッファが小さかった場合なども、差（バイト）が格納される。
-        uint32_t trb_transfer_length : 24;
-        uint32_t completion_code : 8;
-
-        uint32_t cycle_bit : 1;
-        uint32_t : 1;
-        uint32_t event_data : 1;
-        uint32_t : 7;
-        //  ３２
-        uint32_t trb_type : 6;
-        //  エンドポイントのデバイスコンテキストにおけるIDを格納。
-        uint32_t endpoint_id : 5;
-        uint32_t : 3;
-        //  転送リングを使用しているデバイスが使用するスロットのID。
-        //  この値とendpoint_idを用いて、トランスファリングを特定できる。
-        uint32_t slot_id : 8;
-    };
 
 
 
+//////////////////////// Event TRB ////////////////////////
+    union TransferEventTRB { // TODO; コピーしただけ
+        static const uint32_t Type = 32;
+        uint32_t data[4];
+        struct {
+            uint64_t trb_pointer : 64;
 
+            uint32_t trb_transfer_length : 24;
+            uint32_t completion_code : 8;
 
+            uint32_t cycle_bit : 1;
+            uint32_t : 1;
+            uint32_t event_data : 1;
+            uint32_t : 7;
+            uint32_t trb_type : 6;
+            uint32_t endpoint_id : 5;
+            uint32_t : 3;
+            uint32_t slot_id : 8;
+        } __attribute__((packed)) bits;
 
-//  Event TRB
+        TransferEventTRB() : data{} {
+            bits.trb_type = Type;
+        }
 
-    //  TRB Typeは３３
-    //  コマンドリング上のコマンドが完了した時に、
-    //  xHCによって生成されるイベントTRB。
-    //  コンプリーションコードに対応する文字列（Successなど）
-    //  は、kTRBCompletionCodeToName[completion_code]で取得できる。
-    struct CommandCompletionEventTRB
-    {
-        uint64_t : 4;   //  reserved
-        //  このイベントを生み出したコマンドTRBへのポインタを格納している。
-        //  １６バイトでアラインメントされており、
-        //  取り出すときには、４ビット左シフトする必要がある。
-        uint64_t command_trb_pointer : 60;
+        TRB* Pointer() const {
+            return reinterpret_cast<TRB*>(bits.trb_pointer);
+        }
 
-        uint32_t command_completion_parameter : 24;
-        //  コマンドの実行が成功したか、などがわかる。
-        uint32_t completion_code : 8;
-
-        uint32_t cycle_bit : 1;
-        uint32_t : 9;
-        uint32_t trb_type : 6;  //  ３３
-        uint32_t vf_id : 8;
-        uint32_t slot_id : 8;
+        void SetPointer(const TRB* p) {
+            bits.trb_pointer = reinterpret_cast<uint64_t>(p);
+        }
+/* 
+        EndpointID EndpointID() const {
+            return usb::EndpointID{bits.endpoint_id};
+        } */
     };
     
-    //  TRB Typeは３４
-    //  ポートの状態変化が起きた時に用いられる。
-    struct PortStatusChangeEventTRB
-    {
-        uint32_t : 24;
-        uint32_t port_id : 8;
+    union CommandCompletionEventTRB {
+        static const uint32_t Type = 33;
+        uint32_t data[4];
+        struct {
+            uint64_t : 4;
+            volatile uint64_t command_trb_pointer : 60;
 
-        uint32_t : 32;
+            volatile uint32_t command_completion_parameter : 24;
+            volatile uint32_t completion_code : 8;
 
-        uint32_t : 24;
-        uint32_t completion_code : 8;
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+            volatile uint32_t vf_id : 8;
+            volatile uint32_t slot_id : 8;
+        } __attribute__((packed)) bits;
 
-        uint32_t cycle_bit : 1;
-        uint32_t : 9;
-        uint32_t trb_type : 6;
+        CommandCompletionEventTRB() : data{} {
+            bits.trb_type = Type;
+        }
+
+        TRB* Pointer() const {
+            return reinterpret_cast<TRB*>(bits.command_trb_pointer << 4);
+        }
+
+        void SetPointer(TRB* p) {
+            bits.command_trb_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+        }
+
+        const char *CompletionCodeName() {
+            return kTRBCompletionCodeToName[bits.completion_code];
+        }
+    };
+
+    union PortStatusChangeEventTRB {
+        static const unsigned int Type = 34;
+        uint32_t data[4];
+        struct {
+            uint32_t : 24;
+            volatile uint32_t port_id : 8; // root hub port number
+
+            uint32_t : 32;
+
+            uint32_t : 24;
+            volatile uint32_t completion_code : 8;
+
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+        } __attribute__((packed)) bits;
+
+        PortStatusChangeEventTRB() : data{} {
+            bits.trb_type = Type;
+        }
+
+        const char *CompletionCodeName() {
+            return kTRBCompletionCodeToName[bits.completion_code];
+        }
     };
 
 
@@ -329,216 +443,168 @@ namespace usb::xhci
 
 
 
-
-//  COMMAND TRB
-
-
-    //  TRB Typeは９
-    //  xHCに利用可能なデバイススロットを選んでもらい、
-    //  そのスロットのIDをCommandCompletionEventを用いて返させるためのコマンド。
-    struct EnableSlotCommandTRB
+//////////////////////// Command TRB ////////////////////////
+    union NoOpCommandTRB
     {
-        uint32_t : 32;  //  reserved
-        uint32_t : 32;  //  reserved
-        uint32_t : 32;  //  reserved
+        static const uint32_t Type = 23;
+        uint32_t data[4];
+        struct {
+            uint32_t : 32;
+            uint32_t : 32;
+            uint32_t : 32;
 
-        volatile uint32_t cycle_bit : 1;
-        uint32_t : 9;  //  reserved
-        volatile uint32_t trb_type : 6;
-        volatile uint32_t slot_type : 5;    //  選んでもらうスロットのタイプを指示する
-        uint32_t : 11;  //  reserved
-    };
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+            uint32_t : 16;
+        } __attribute__((packed)) bits;
 
-    //  TRB Typeは１０
-    //  スロットをDisable状態にするように指示するコマンド。
-    //  USBデバイスがポートから取り外されたとき、このコマンドを実行する。
-    struct DisableSlotCommandTRB
+        NoOpCommandTRB() : data{} {
+            bits.trb_type = Type;
+        }
+    } __attribute__((packed));
+
+    union EnableSlotCommandTRB // xHCに利用可能なデバイススロットを選び割り当ててもらうコマンド
     {
-        uint32_t : 32;  //  reserved
-        uint32_t : 32;  //  reserved
-        uint32_t : 32;  //  reserved
+        static const uint32_t Type = 9;
+        uint32_t data[4];
+        struct {
+            uint32_t : 32;
+            uint32_t : 32;
+            uint32_t : 32;
 
-        volatile uint32_t cycle_bit : 1;
-        uint32_t : 9;  //  reserved
-        volatile uint32_t trb_type : 6;
-        uint32_t : 8;  //  reserved
-        volatile uint32_t slot_id : 8;  //  DisableにしたいスロットのIDを書き込む。
-    };
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+            volatile uint32_t slot_type : 5; //  選んでもらうスロットのタイプを指示する
+            uint32_t : 11;
+        } __attribute__((packed)) bits;
 
-    //  TRB Typeは１２
-    //  エンドポイントの帯域幅や必要な資源を評価する（よく分からん）
-    struct ConfigureEndpointCommandTRB
+        EnableSlotCommandTRB() : data {} {
+            bits.trb_type = Type;
+        }
+    } __attribute__((packed));
+
+    union DisableSlotCommandTRB // 指定したスロットをDisableにするコマンド
     {
-        uint64_t : 4;
-        //  読み出す時は左４ビットシフト
-        //  書き込む時は右４ビットシフトをする。
-        volatile uint64_t input_context_pointer : 60;
+        static const uint32_t Type = 10;
+        uint32_t data[4];
+        struct {
+            uint32_t : 32;
+            uint32_t : 32;
+            uint32_t : 32;
 
-        uint32_t : 32;
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+            uint32_t : 8;
+            volatile uint32_t slot_id : 8; // DisableにしたいスロットのIDを書き込む。
+        } __attribute__((packed)) bits;
 
-        volatile uint32_t cycle_bit : 1;
-        uint32_t : 8;
-        volatile uint32_t deconfigure : 1;
-        volatile uint32_t trb_type : 6;
-        uint32_t : 8;
-        volatile uint32_t slot_id : 8;
-    };
+        DisableSlotCommandTRB(uint8_t slot_id) : data{} {
+            bits.slot_id = slot_id;
+            bits.trb_type = Type;
+        }
+    } __attribute__((packed));
+
+    union AddressDeviceCommandTRB
+    {
+        static const uint32_t Type = 11;
+        uint32_t data[4];
+        struct {
+            uint64_t : 4;
+            volatile uint64_t input_context_pointer : 60;
+
+            uint32_t : 32;
+
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 8;
+            //  この値が０の時は、「USB SET_ADDRESS」リクエストを生成する。
+            //  １の時は、生成しない。
+            //  もっと詳しく書きたいが、後でにしておく。
+            volatile uint32_t block_set_address_request : 1;
+            volatile uint32_t trb_type : 6;
+            uint32_t : 8;
+            volatile uint32_t slot_id : 8;
+        } __attribute__((packed)) bits;
+
+        void *Pointer() const {
+            return reinterpret_cast<void *>(bits.input_context_pointer << 4);
+        }
+
+        void SetPointer(void *p) {
+            bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+        }
+
+  /*       AddressDeviceCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
+            bits.trb_type = Type;
+            bits.slot_id = slot_id;
+            SetPointer(input_context);
+        } */
+    } __attribute__((packed));
+
+    union ConfigureEndpointCommandTRB //  エンドポイントの帯域幅や必要な資源を評価する（よく分からん）
+    {
+        static const uint32_t Type = 12;
+        uint32_t data[4];
+        struct {
+            uint64_t : 4;
+            volatile uint64_t input_context_pointer : 60;
+
+            uint32_t : 32;
+
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 8;
+            volatile uint32_t deconfigure : 1;
+            volatile uint32_t trb_type : 6;
+            uint32_t : 8;
+            volatile uint32_t slot_id : 8;
+        } __attribute__((packed)) bits;
+
+        void *Pointer() const {
+            return reinterpret_cast<void *>(bits.input_context_pointer << 4);
+        }
+
+        void SetPointer(void *p) {
+            bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+        }
+
+/*         ConfigureEndpointCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
+            bits.trb_type = Type;
+            bits.slot_id = slot_id;
+            SetPointer(input_context);
+        } */
+    } __attribute__((packed));
     
-    //  TRB Typeは１５
-    //  xHCがTDを実行するのを一時停止させるコマンド？
-    struct StopEndpointCommandTRB
+    union StopEndpointCommandTRB //  xHCがTDを実行するのを一時停止させるコマンド？
     {
-        uint32_t : 32;
-        uint32_t : 32;
-        uint32_t : 32;
+        static const uint32_t Type = 15;
+        uint32_t data[4];
+        struct {
+            uint32_t : 32;
+            uint32_t : 32;
+            uint32_t : 32;
 
-        volatile uint32_t cycle_bit : 1;
-        uint32_t : 9;
-        volatile uint32_t trb_type : 6;
-        volatile uint32_t endpoint_id : 5;
-        uint32_t : 2;
-        volatile uint32_t suspend : 1;
-        volatile uint32_t slot_id : 8;
-    };
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 9;
+            volatile uint32_t trb_type : 6;
+            volatile uint32_t endpoint_id : 5;
+            uint32_t : 2;
+            volatile uint32_t suspend : 1;
+            volatile uint32_t slot_id : 8;
+        } __attribute__((packed)) bits;
+
+/*         StopEndpointCommandTRB(DeviceContextIndex endpoint_id, uint8_t slot_id) : data{} {
+            bits.trb_type = Type;
+            bits.endpoint_id = endpoint_id.value;
+            bits.slot_id = slot_id;
+        } */
+    } __attribute__((packed));
     
-    //  TRB Typeは１１
-    struct AddressDeviceCommandTRB
-    {
-        uint64_t : 4;
-        //  インプットコンテキストの先頭ポインタ。
-        //  読み出すときには４ビット左シフト、
-        //  書き込むときには４ビット右シフトする必要がある。
-        //  つまり、このポインタは１６バイトでアラインメントされている必要がある。
-        volatile uint64_t input_context_pointer : 60;
-
-        uint32_t : 32;
-
-        volatile uint32_t cycle_bit : 1;
-        uint32_t : 8;
-        //  この値が０の時は、「USB SET_ADDRESS」リクエストを生成する。
-        //  １の時は、生成しない。
-        //  もっと詳しく書きたいが、後でにしておく。
-        volatile uint32_t block_set_address_request : 1;
-        volatile uint32_t trb_type : 6;
-        uint32_t : 8;
-        //  このコマンドのターゲットとなるスロットのID。
-        volatile uint32_t slot_id : 8;
-    };
-
 
 
 //  OTHER TRB
     ///////////////////////////OK
     
-    
-
-
-//  Completion Code
-    inline const char* kTRBCompletionCodeToName[37] = {
-        "Invalid",
-        "Success",
-        "Data Buffer Error",
-        "Babble Detected Error",
-        "USB Transaction Error",
-        "TRB Error",
-        "Stall Error",
-        "Resource Error",
-        "Bandwidth Error",
-        "No Slots Available Error",
-        "Invalid Stream Type Error",
-        "Slot Not Enabled Error",
-        "Endpoint Not Enabled Error",
-        "Short Packet",
-        "Ring Underrun",
-        "Ring Overrun",
-        "VF Event Ring Full Error",
-        "Parameter Error",
-        "Bandwidth Overrun Error",
-        "Context State Error",
-        "No ping Response Error",
-        "Event Ring Full Error",
-        "Incompatible Device Error",
-        "Missed Service Error",
-        "Command Ring Stopped",
-        "Command Aborted",
-        "Stopped",
-        "Stopped - Length Invalid",
-        "Stopped - Short Packet",
-        "Max Exit Latency Too Large Error",
-        "Reserved",
-        "Isoch Buffer Overrun",
-        "Event Lost Error",
-        "Undefined Error",
-        "Invalid Stream ID Error",
-        "Secondary Bandwidth Error",
-        "Split Transaction Error",
-    };
-
-    inline const char* kTRBTypeToName[64] = {
-        "Reserved",                             // 0
-        "Normal",
-        "Setup Stage",
-        "Data Stage",
-        "Status Stage",
-        "Isoch",
-        "Link",
-        "EventData",
-        "No-Op",                                // 8
-        "Enable Slot Command",
-        "Disable Slot Command",
-        "Address Device Command",
-        "Configure Endpoint Command",
-        "Evaluate Context Command",
-        "Reset Endpoint Command",
-        "Stop Endpoint Command",
-        "Set TR Dequeue Pointer Command",       // 16
-        "Reset Device Command",
-        "Force Event Command",
-        "Negotiate Bandwidth Command",
-        "Set Latency Tolerance Value Command",
-        "Get Port Bandwidth Command",
-        "Force Header Command",
-        "No Op Command",
-        "Reserved",                             // 24
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Transfer Event",                       // 32
-        "Command Completion Event",
-        "Port Status Change Event",
-        "Bandwidth Request Event",
-        "Doorbell Event",
-        "Host Controller Event",
-        "Device Notification Event",
-        "MFINDEX Wrap Event",
-        "Reserved",                             // 40
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "Vendor Defined",                       // 48
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",                       // 56
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-        "Vendor Defined",
-    };
 
 }

@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Aug  2 19:51:09 2022
+# Make data base, printed on Thu Aug  4 12:17:36 2022
 
 # Variables
 
@@ -151,7 +151,7 @@ SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-165163bb-17d0-4bf5-afed-638b10b38ad1.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-8aa80b63-0904-4f51-96ed-fb67d3454e44.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -185,6 +185,8 @@ GDK_BACKEND = x11
 # automatic
 +F = $(notdir $+)
 # environment
+NO_AT_BRIDGE = 1
+# environment
 QT_ACCESSIBILITY = 1
 # default
 MAKEFILES := 
@@ -215,7 +217,7 @@ LANG = C
 # environment
 VSCODE_PID = 2294
 # variable set hash-table stats:
-# Load=101/1024=10%, Rehash=0, Collisions=13/123=11%
+# Load=102/1024=10%, Rehash=0, Collisions=13/124=10%
 
 # Pattern-specific Variable Values
 
@@ -281,6 +283,6 @@ GNUmakefile:
 # strcache performance: lookups = 25 / hit rate = 12%
 # hash-table stats:
 # Load=22/8192=0%, Rehash=0, Collisions=1/25=4%
-# Finished Make data base on Tue Aug  2 19:51:09 2022
+# Finished Make data base on Thu Aug  4 12:17:36 2022
 
  

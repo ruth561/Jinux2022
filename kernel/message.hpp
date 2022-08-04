@@ -6,7 +6,8 @@ struct Message
 {
     enum class Type {
         kNullMessage, 
-        kTimerTimeout
+        kTimerTimeout,
+        kInterruptXHCI,
     } type;
 
     union {

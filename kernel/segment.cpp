@@ -96,11 +96,17 @@ void InitializeTSS()
     uint64_t ist3_end = ist3_begin + kISTFrames * kBytesPerFrame;
     logger->debug("IST3 : 0x%lx ~ 0x%lx\n", ist3_begin, ist3_end);
 
+    // xHCI用
+    uint64_t ist4_begin = reinterpret_cast<uint64_t>(memory_manager->Allocate(kISTFrames).Frame());
+    uint64_t ist4_end = ist4_begin + kISTFrames * kBytesPerFrame;
+    logger->debug("IST4 : 0x%lx ~ 0x%lx\n", ist4_begin, ist4_end);
+
     // TSSに値を指定する。
     tss.rsp0 = ring0_stack_end;
     tss.ist1 = ist1_end;
     tss.ist2 = ist2_end;
     tss.ist3 = ist3_end;
+    tss.ist4 = ist4_end;
     
     // GDTへの設定
     uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss);

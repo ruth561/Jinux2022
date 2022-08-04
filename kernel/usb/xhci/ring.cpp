@@ -51,16 +51,16 @@ namespace usb::xhci
             enqueue_pointer_->data[i] = trb->data[i]; 
         }
         enqueue_pointer_->bits.cycle_bit = cycle_bit_;
-        logger->debug("PushTRB %p: %08x %08x %08x %08x\n", 
+        /* logger->debug("PushTRB %p: %08x %08x %08x %08x\n", 
             enqueue_pointer_, 
             enqueue_pointer_->data[0], 
             enqueue_pointer_->data[1],  
             enqueue_pointer_->data[2], 
-            enqueue_pointer_->data[3]);
+            enqueue_pointer_->data[3]); */
         enqueue_pointer_++;
 
         if (enqueue_pointer_->bits.trb_type == 6) { // LinkTRBに達した場合
-            logger->debug("[Ring::Push] Enqueue Pointer Reached To Link TRB.\n");
+            /* logger->debug("[Ring::Push] Enqueue Pointer Reached To Link TRB.\n"); */
             LinkTRB *link_trb = reinterpret_cast<LinkTRB *>(enqueue_pointer_);
             link_trb->bits.cycle_bit = cycle_bit_;
             enqueue_pointer_ = reinterpret_cast<TRB *>(link_trb->Pointer());
@@ -114,23 +114,28 @@ namespace usb::xhci
     TRB *EventRing::ReadDequeuePointer() const
     {
         return reinterpret_cast<TRB *>(interrupter_->ERDP.Pointer());
-    }
+    } 
 
     void EventRing::WriteDequeuePointer(TRB *ptr)
     {
         interrupter_->ERDP.SetPointer(ptr);
     }
 
+    TRB *EventRing::Front()
+    {
+        return reinterpret_cast<TRB *>(interrupter_->ERDP.Pointer());
+    }
+
     void EventRing::Pop()
     {
         TRB *trb_ptr = ReadDequeuePointer() + 1;
-        logger->debug("[EventRing::Pop] Dequeue Pointer: %p\n", trb_ptr);
+        // logger->debug("[EventRing::Pop] Dequeue Pointer: %p\n", trb_ptr);
 
         TRB* segment_begin = reinterpret_cast<TRB *>(erst_[0].ring_segment_base_address);
         TRB* segment_end = segment_begin + erst_[0].ring_segment_size;
 
         if (trb_ptr == segment_end) { // セグメントの終端へ達した場合
-            logger->debug("[EventRing::Pop] Dequeue Pointer Reached To The End Of Event Ring Segment.\n");
+            // logger->debug("[EventRing::Pop] Dequeue Pointer Reached To The End Of Event Ring Segment.\n");
             trb_ptr = segment_begin;
             cycle_bit_ = !cycle_bit_;
         }
