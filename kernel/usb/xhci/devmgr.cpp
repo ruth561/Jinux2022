@@ -1,6 +1,5 @@
 #include "devmgr.hpp"
 
-
 namespace usb::xhci
 {
     void DeviceManager::Initialize(uint8_t max_slots)
@@ -60,7 +59,7 @@ namespace usb::xhci
             return -1;
         }
 
-        logger->debug("[DeviceManager::AllocDevice] SlotID: %02hhdd\n", slot_id);
+        logger->debug("[DeviceManager::AllocDevice] SlotID: %02hhd\n", slot_id);
         devices_[slot_id] = new Device(slot_id, doorbell);
         devices_[slot_id]->Initialize();
 

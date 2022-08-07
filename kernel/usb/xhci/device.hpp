@@ -4,7 +4,9 @@
 #include "registers.hpp"
 #include "context.hpp"
 #include "../memory.hpp"
-// #include "../device.hpp"
+#include "../endpoint.hpp"
+#include "../device.hpp"
+#include "../setupdata.hpp"
 #include "../../logging.hpp"
 extern logging::Logger *logger;
 int printk(const char *format, ...);
@@ -64,9 +66,7 @@ namespace usb::xhci
     };
 
 
-
-    //  USBデバイスごとに存在するデータ構造などをまとめて管理したもの。
-    class Device/*  : public usb::Device */
+    class Device : public usb::Device
     {
     public:
         Device(uint8_t slot_id, DoorbellRegister *doorbell);
@@ -84,7 +84,7 @@ namespace usb::xhci
         //  失敗すればNULLを返す。
         Ring *AllocTransferRing(DeviceContextIndex dci, uint32_t ring_size);
 
-/*         //  成功したら０を、失敗したら−１を返す。
+        //  成功したら０を、失敗したら−１を返す。
         //  bufには、扱うデータ領域の先頭ポインタを格納する。
         //  lenは、そのbufの大きさを示す。
         //  buf==NULLの時、DataStageは省略される。
@@ -92,11 +92,10 @@ namespace usb::xhci
         //  setup_dataは、SetupDataTRBの設定に用いられる。
         //  bufがNULLの時は、setup->statusというTRBを送信する。
         //  bufがNULLでない時は、setup->data->statusというTRBを送信する。
-        int ControlIn(EndpointID ep_id, SetupData setup_data, 
-                    void *buf, int len, ClassDriver *issuer) override;
+        int ControlIn(EndpointID ep_id, SetupData setup_data, void *buf, int len) override;
 
-        int ControlOut(EndpointID ep_id, SetupData setup_data,
-                    void* buf, int len, ClassDriver *issuer) override; */
+        int ControlOut(EndpointID ep_id, SetupData setup_data, void* buf, int len) override;
+        
         
         //  TransferEventを受け取った時に実行されるメンバ関数。
         //  引数には、そのイベントTRBへのポインタが渡される。

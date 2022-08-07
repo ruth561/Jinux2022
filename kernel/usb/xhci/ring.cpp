@@ -60,7 +60,7 @@ namespace usb::xhci
         enqueue_pointer_++;
 
         if (enqueue_pointer_->bits.trb_type == 6) { // LinkTRBに達した場合
-            /* logger->debug("[Ring::Push] Enqueue Pointer Reached To Link TRB.\n"); */
+            /* logger->debug("[Ring::Push] Enqueue Pointer Reached To Link TRB.\n"); */ 
             LinkTRB *link_trb = reinterpret_cast<LinkTRB *>(enqueue_pointer_);
             link_trb->bits.cycle_bit = cycle_bit_;
             enqueue_pointer_ = reinterpret_cast<TRB *>(link_trb->Pointer());

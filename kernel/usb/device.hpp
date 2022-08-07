@@ -6,20 +6,18 @@
 #include "setupdata.hpp"
 #include "descriptor.hpp"
 
-#include "./classdriver/base.hpp"
+#include "classdriver/base.hpp"
+#include "classdriver/hid.hpp"
+
+// #include "./classdriver/base.hpp"
 
 int printk(const char *format, ...);
-
-namespace usb
-{
-    class ClassDriver;
-}
 
 namespace
 {
     using namespace usb;
 
-    const int kEventWaitersMapSize = 32;
+/*     const int kEventWaitersMapSize = 32;
 
     bool CompareSetupData(SetupData *setup1, SetupData *setup2)
     {
@@ -30,19 +28,19 @@ namespace
         if (setup1->value != setup2->value) return false;  printk("value\n");
 
         return true;
-    }
+    } */
 
     //  イベントを待つクラスドライバと、そのイベントのセットアップデータの組を保持する辞書。
-    class EventWaitersMap
+/*     class EventWaitersMap
     {
     public:
         //  setup_dataに関連するクラスドライバを返す
         ClassDriver *Get(SetupData *setup_data)
         {
             for (int i = 0; i < kEventWaitersMapSize; i++) {
-                /* if (dict_[i][0]) {
-                    printk("dict_[%d][0]=0x%016lx issuer_trb=0x%016lx\n", i, dict_[i][0], issuer_trb);
-                } */
+                // if (dict_[i][0]) {
+                //    printk("dict_[%d][0]=0x%016lx issuer_trb=0x%016lx\n", i, dict_[i][0], issuer_trb);
+                //}
                 if (dict_[i][0]) {
                     printk("dict_[%d][0]=0x%016lx issuer_trb=0x%016lx\n", i, dict_[i][0], setup_data);
                     if (CompareSetupData((SetupData *) dict_[i][0], setup_data)) {
@@ -85,40 +83,28 @@ namespace
         //  組の数は、kSetupStageMapSizeで指定される。
         void *dict_[kEventWaitersMapSize][2] = {};
     };
+ */
 }
 
 namespace usb
 {
-    class ClassDriver;
-
-    class Device
+    class Device 
     {
     public:
-        //  この関数は、派生クラスによってオーバーライドされるので実行されない。
-        virtual int ControlIn(EndpointID ep_id, SetupData setup_data, 
-                            void *buf, int len, ClassDriver *issuer) 
-        {
-            printk("++++++++++++++++++++++++++++++\n");
-            if (issuer) {
-                printk("issuer is not NULL\n");
-                event_waiters_.Put(&setup_data, issuer);
-            }
-            return 0;
-        }
+        virtual int ControlIn(EndpointID ep_id, SetupData setup_data, void *buf, int len) { return -1; };
 
-        //  この関数は、派生クラスによってオーバーライドされるので実行されない。
-        virtual int ControlOut(EndpointID ep_id, SetupData setup_data,
-                            void* buf, int len, ClassDriver *issuer)
-        {
-            printk("++++++++++++++++++++++++++++++\n");
-            if (issuer) {
-                printk("issuer is not NULL\n");
-                event_waiters_.Put(&setup_data, issuer);
-            }
-            return 0;
-        }
-
+        virtual int ControlOut(EndpointID ep_id, SetupData setup_data, void* buf, int len) { return -1; };
+ 
+        // デバイスディスクリプタの取得をリクエスト
         int StartInitialize();
+
+        //  デバイスディクリプタの情報をもとに設定を行い、コンフィギュレーションディスクリプタの取得を試みる。
+        int InitializePhase1(DeviceDescriptor *dev_desc);
+
+        //  lenは、受け取ったデータのサイズを表している。
+        int InitializePhase2(ConfigurationDescriptor *config_desc, int len);
+
+        int InitializePhase3(uint8_t config_value);
 
         //  一連のコントロール転送が完了し、イベントが発行された後に呼び出される。
         //  USB規格上で扱えるように、SetupDataとデータバッファなどが解析された後に呼び出される。
@@ -129,34 +115,22 @@ namespace usb
         //  len：実際に送受信したデータサイズ
         int OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len);
         
-
         //  各エンドポイントに設定が終わった時に呼ばれる関数。
         //  クラスドライバのOnEndpointsConfigured()を呼び出す。
         int OnEndpointsConfigured();
 
-        //  デバイスディスクリプタを取得後に呼び出される。
-        //  デバイスディクリプタの情報をもとに設定を行い、コンフィギュレーションディスクリプタの取得を試みる。
-        int InitializePhase1(DeviceDescriptor *dev_desc);
-
-        //  コンフィギュレーションディスクリプタを取得後に呼ばれる関数。
-        //  lenは、受け取ったデータのサイズを表している。
-        int InitializePhase2(ConfigurationDescriptor *config_desc, int len);
-
-        int InitializePhase3(uint8_t config_value);
-
         bool IsInitialized() { return is_initialized_; }
 
-        //  このクラスの使用するエンドポイントのコンフィグ情報が詰まった配列を返す。
+/*         //  このクラスの使用するエンドポイントのコンフィグ情報が詰まった配列を返す。
         EndpointConfig *EndpointConfigs() { return ep_configs_; }
-        int NumEndpointConfig() { return num_ep_configs_; }
-
+        int NumEndpointConfig() { return num_ep_configs_; } */
 
     private:
         //  コントロール転送でデータをやり取りするのに用いられるメモリ領域。
         uint8_t buf_[256] = {};
 
-        //  i番目のEndpoint上で動くインターフェースのドライバへのポインタの配列。
-        ClassDriver *class_drivers_[16];
+        // class_driver_[interface_number] := インターフェースに対応したクラスドライバへのポインタ
+        ClassDriver *class_drivers_[256] = {};
 
         //  i番目のエンドポイントの設定情報を格納する配列。
         //  ここで管理されるエンドポイントは、このOSが対応しているインターフェースの
@@ -177,7 +151,7 @@ namespace usb
         //  今どの段階にいるのかを示してくれる。
         int initialize_phase_ = 0;
 
-        EventWaitersMap event_waiters_;
+        // EventWaitersMap event_waiters_;
 
         //  スタンダードデバイスリクエストの中のGET_DESCRIPTORを発行するプロシージャ。
         //  bufには、ディスクリプタのデータが格納される。lenはbufのサイズである。
@@ -188,5 +162,7 @@ namespace usb
         int GetDescriptor(EndpointID ep_id, uint8_t desc_type, uint8_t desc_index, void *buf, int len);
 
         int SetConfiguration(EndpointID ep_id, uint8_t config_value);
+
+
     };
 }

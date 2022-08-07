@@ -1,6 +1,6 @@
 #include "device.hpp"
 
-/* 
+
 namespace
 {
     using namespace usb::xhci;
@@ -15,16 +15,13 @@ namespace
     //  ３：IN Data Stage
     SetupStageTRB MakeSetupStageTRB(usb::SetupData setup_data, int transfer_type)
     {
-        SetupStageTRB setup = {};
-        setup.request_type = setup_data.request_type.data;
-        setup.request = setup_data.request;
-        setup.value = setup_data.value;
-        setup.index = setup_data.index;
-        setup.length = setup_data.length;
-        setup.transfer_type = transfer_type;
-        setup.trb_type = 2;
-        setup.immediate_data = 1;
-        setup.trb_transfer_length = 8;
+        SetupStageTRB setup{};
+        setup.bits.request_type = setup_data.request_type.data;
+        setup.bits.request = setup_data.request;
+        setup.bits.value = setup_data.value;
+        setup.bits.index = setup_data.index;
+        setup.bits.length = setup_data.length;
+        setup.bits.transfer_type = transfer_type;
         return setup;
     }
 
@@ -33,26 +30,22 @@ namespace
     //  dir_inはデータ転送の向きを指定する。trueの時、INを表す。
     DataStageTRB MakeDataStageTRB(void *buf, int len, bool dir_in)
     {
-        DataStageTRB data = {};
-        data.data_buffer_pointer = (uint64_t) buf;
-        data.trb_transfer_length = len;
-        data.td_size = 0;
-        data.direction = dir_in;
-        data.trb_type = 3;
+        DataStageTRB data{};
+        data.bits.data_buffer_pointer = reinterpret_cast<uint64_t>(buf);
+        data.bits.trb_transfer_length = len;
+        data.bits.td_size = 0;
+        data.bits.direction = dir_in;
         return data;
     }
 
     StatusStageTRB MakeStatusStageTRB()
     {
         StatusStageTRB status = {};
-        status.trb_type = 4;
         return status;
     }
 
-
-    
 } 
- */
+
 namespace usb::xhci
 {
     Device::Device(uint8_t slot_id, DoorbellRegister *doorbell) : 
@@ -98,162 +91,138 @@ namespace usb::xhci
         return transfer_rings_[dci.value];
     }
 
-/*     int Device::ControlIn(EndpointID ep_id, SetupData setup_data, 
-                    void *buf, int len, ClassDriver *issuer) {
-        
-        // printk("[Device::ControlIn] ep_dci %d, buf 0x%lx, len %d\n", 
-        //  ep_id.DeviceContextID(), buf, len);
-        if (auto err = usb::Device::ControlIn(ep_id, setup_data, buf, len, issuer)) {
-            return err;
-        }
-
+    int Device::ControlIn(EndpointID ep_id, SetupData setup_data, void *buf, int len) 
+    {
         if (ep_id.EndpointNumber() < 0 || ep_id.EndpointNumber() > 15) {
-            printk("        Invailed ep_num %d\n", ep_id.EndpointNumber());
+            logger->error("[ControlIn] Invailed Endpoint Number %d\n", ep_id.EndpointNumber());
             return -1;
         }
-        
-        int dci = ep_id.DeviceContextID();
+          
+        uint8_t dci = ep_id.DeviceContextID();
         Ring *tr = transfer_rings_[dci];
         if (tr == NULL) {
-            printk("        There are no ring at dci%02d\n", dci);
+            logger->error("[ControlIn] There Are No Ring At DCI4%02d\n", dci);
             return -1;
         }
 
-
         StatusStageTRB status = MakeStatusStageTRB();
-
         if (buf) {  //  DataStageありの場合。
-            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 3);
+            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 3); // IN DATA STAGE
             TRB *setup_trb_position = tr->Push(&setup);
             DataStageTRB data = MakeDataStageTRB(buf, len, true);
-            data.interrupt_on_completion = 1;
+            data.bits.interrupt_on_completion = 1; // 割り込みを発生させるよう要請
             TRB *data_trb_position = tr->Push(&data);
+            status.bits.direction = false; // ACKの向きなのでOUT方向
             tr->Push(&status);
             if (setup_stage_map.Put(data_trb_position, (SetupStageTRB *) setup_trb_position)) {
-                printk("[ERROR] SetupStageMap is full!!\n");
+                logger->error("[ControlIn] SetupStageMap is full!!\n");
                 return -1;
             }
         } else {
-            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 0);
+            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 0); // NO DATA STAGE
             TRB *setup_trb_position = tr->Push(&setup);
-            status.direction = true;
-            status.interrupt_on_completion = true;
+            status.bits.direction = true; // ACKの向きなのでIN方向
+            status.bits.interrupt_on_completion = true; // 割り込みを発生させるよう要請
             TRB *status_trb_position = tr->Push(&status);
             if (setup_stage_map.Put(status_trb_position, (SetupStageTRB *) setup_trb_position)) {
-                printk("[ERROR] SetupStageMap is full!!\n");
+                logger->error("[ControlIn] SetupStageMap is full!!\n");
                 return -1;
             }
         }
 
-        RingDoorbell(dci);
-
+        RingDoorbell(DeviceContextIndex{dci});
         return 0;
     }
 
-
-    int Device::ControlOut(EndpointID ep_id, SetupData setup_data,
-                    void* buf, int len, ClassDriver *issuer)
+    int Device::ControlOut(EndpointID ep_id, SetupData setup_data, void* buf, int len)
     {
-        // printk("[Device::ControlOut] ep_dci %d, buf 0x%lx, len %d\n", 
-        //  ep_id.DeviceContextID(), buf, len);
-        if (auto err = usb::Device::ControlOut(ep_id, setup_data, buf, len, issuer)) {
-            return err;
-        }
-        
-        if (ep_id.EndpointNumber() < 0 || ep_id.EndpointNumber() > 15) {
-            printk("        Invailed ep_num %d\n", ep_id.EndpointNumber());
+         if (ep_id.EndpointNumber() < 0 || ep_id.EndpointNumber() > 15) {
+            logger->error("[ControlOut] Invailed Endpoint Number %d\n", ep_id.EndpointNumber());
             return -1;
         }
 
-        int dci = ep_id.DeviceContextID();
+        uint8_t dci = ep_id.DeviceContextID();
         Ring *tr = transfer_rings_[dci];
         if (tr == NULL) {
-            printk("        There are no ring at dci%02d\n", dci);
+            logger->error("[ControlOut] There Are No Ring At DCI4%02d\n", dci);
             return -1;
         }
 
-
         StatusStageTRB status = MakeStatusStageTRB();
-
         if (buf) {  //  DataStageありの場合。
-            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 2);
+            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 2); // OUT DATA STAGE
             TRB *setup_trb_position = tr->Push(&setup);
-            DataStageTRB data = MakeDataStageTRB(buf, len, true);
-            data.interrupt_on_completion = 1;
+            DataStageTRB data = MakeDataStageTRB(buf, len, false); // OUT方向
+            data.bits.interrupt_on_completion = 1; // 割り込み要求
             TRB *data_trb_position = tr->Push(&data);
+            status.bits.direction = true; // IN方向
             tr->Push(&status);
             if (setup_stage_map.Put(data_trb_position, (SetupStageTRB *) setup_trb_position)) {
-                printk("[ERROR] SetupStageMap is full!!\n");
+                logger->error("[ControlOut] SetupStageMap is full!!\n");
                 return -1;
             }
         } else {
-            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 0);
+            SetupStageTRB setup = MakeSetupStageTRB(setup_data, 0); // NO DATA STAGE
             TRB *setup_trb_position = tr->Push(&setup);
-            status.interrupt_on_completion = true;
+            status.bits.direction = true; // ACKの向きなのでIN方向
+            status.bits.interrupt_on_completion = true; // 割り込み要求
             TRB *status_trb_position = tr->Push(&status);
             if (setup_stage_map.Put(status_trb_position, (SetupStageTRB *) setup_trb_position)) {
-                printk("[ERROR] SetupStageMap is full!!\n");
+                logger->error("[ControlOut] SetupStageMap is full!!\n");
                 return -1;
             }
         }
 
-        RingDoorbell(dci);
-
+        RingDoorbell(DeviceContextIndex{dci});
         return 0;
     }
- */
-/*     int Device::OnTransferEventReceived(TransferEventTRB *trb)
-    {
-        int residual_length = trb->trb_transfer_length;
 
-        if (trb->completion_code != 1 &&
-            trb->completion_code != 13) {
-                //  SuccessでもShortPacketsでもない場合。
-                printk("[ERROR] TransferEventTRB completion code");
+    int Device::OnTransferEventReceived(TransferEventTRB *trb)
+    {
+        logger->debug("[Device::OnTransferEventReceived]\n");
+        int residual_length = trb->bits.trb_transfer_length;
+
+        if (trb->bits.completion_code != 1 &&
+            trb->bits.completion_code != 13) {
+                //  SuccessでもShortPacketsでもない場合
+                logger->error("[Device::OnTransferEventReceived] Invalid Completion Code.\n");
                 return -1;
         }
-        //printk("Transfer (value %08lx) completed: %s, residual length %d, slot %d, ep dci %d\n",
-        //  trb->trb_pointer,
-        //  kTRBCompletionCodeToName[trb->completion_code],
-        //  trb->trb_transfer_length,
-        //  trb->slot_id,
-        //  trb->endpoint_id);
 
         // このイベントを発行したTransfer TRBへのポインタ。
-        TRB *issuer_trb = (TRB *) trb->trb_pointer;
+        TRB *issuer_trb = trb->Pointer();
         // セットアップTRBを取得する。
         SetupStageTRB *setup_stage_trb = setup_stage_map.Get(issuer_trb);
         if (setup_stage_trb == NULL) {
-            printk("[ERROR] There is no setup stage trb\n");
+            logger->error("[Device::OnTransferEventReceived] There Is No Setup Stage TRB.\n");
             return -1;
         }
         setup_stage_map.Delete(issuer_trb);
-        //  printk("SetupStageTRB (value %08lx)\n", setup_stage_trb);
 
         //  USBデバイスへ渡す抽象データをTRBから作成する。
         SetupData setup_data = {};
-        setup_data.request_type.data = setup_stage_trb->request_type;
-        setup_data.request = setup_stage_trb->request;
-        setup_data.value = setup_stage_trb->value;
-        setup_data.index = setup_stage_trb->index;
-        setup_data.length = setup_stage_trb->length;
-
+        setup_data.request_type.data = setup_stage_trb->bits.request_type;
+        setup_data.request = setup_stage_trb->bits.request;
+        setup_data.value = setup_stage_trb->bits.value;
+        setup_data.index = setup_stage_trb->bits.index;
+        setup_data.length = setup_stage_trb->bits.length;
 
         void *data_stage_buf = NULL;
         int transfer_length = 0;
-        if (issuer_trb->trb_type == 3) {    //  DataStageTRB
-            DataStageTRB *data_stage_trb = (DataStageTRB *) issuer_trb;
-            data_stage_buf = (void *) data_stage_trb->data_buffer_pointer;
-            transfer_length = data_stage_trb->trb_transfer_length - residual_length;    //  実際のバッファの大きさ。
-        } else if (issuer_trb->trb_type == 4) { //  StatusStageTRB
+        if (issuer_trb->bits.trb_type == 3) {  //  DataStageTRB
+            logger->debug("DATA STAGE TRB!!\n");
+            DataStageTRB *data_stage_trb = reinterpret_cast<DataStageTRB *>(issuer_trb);
+            data_stage_buf = reinterpret_cast<void *>(data_stage_trb->bits.data_buffer_pointer);
+            transfer_length = data_stage_trb->bits.trb_transfer_length - residual_length;    //  実際のバッファの大きさ。
+        } else if (issuer_trb->bits.trb_type == 4) { //  StatusStageTRB
+            logger->debug("STATUS STAGE TRB!!\n");
             //  pass
         } else {
             return -1;
         }
 
-        EndpointID ep_id(trb->endpoint_id);
-
+        EndpointID ep_id{DeviceContextIndex{static_cast<uint8_t>(trb->bits.endpoint_id)}};
         return OnControlCompleted(ep_id, setup_data, data_stage_buf, transfer_length);
     }
- */
+
 }

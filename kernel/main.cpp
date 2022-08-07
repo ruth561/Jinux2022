@@ -67,11 +67,13 @@ extern "C" void KernelMainNewStack(
 
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
-    logger->set_level(logging::kDEBUG); // 出力減らす
+    logger->set_level(logging::kERROR); // 出力減らす
 
     usb::xhci::Initialize(); // xHCの初期化 
 
- 
+    while (true) {
+        usb::xhci::ProcessEvents(); 
+    }
 
     // logger->set_level(logging::kERROR); // 例外ハンドラ内でsvprintfを使用しないためにフィルターを強める
 

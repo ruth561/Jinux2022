@@ -13,6 +13,95 @@ extern std::deque<Message> *main_queue;
 extern TaskManager* task_manager;
 int printk(const char *format, ...);
 
+namespace
+{
+    void PrintHex(uint8_t value) {
+        switch (value) {
+            case 0:
+                printk("0");
+                break;
+            case 1:
+                printk("1");
+                break;
+            case 2:
+                printk("2");
+                break;
+            case 3:
+                printk("3");
+                break;
+            case 4:
+                printk("4");
+                break;
+            case 5:
+                printk("5");
+                break;
+            case 6:
+                printk("6");
+                break;
+            case 7:
+                printk("7");
+                break;
+            case 8:
+                printk("8");
+                break;
+            case 9:
+                printk("9");
+                break;
+            case 10:
+                printk("A");
+                break;
+            case 11:
+                printk("B");
+                break;
+            case 12:
+                printk("C");
+                break;
+            case 13:
+                printk("D");
+                break;
+            case 14:
+                printk("E");
+                break;
+            case 15:
+                printk("F");
+                break;
+        }
+    }
+
+    void PrintNumber(uint8_t value)
+    {
+        printk("0x");
+        for (int i = 2; i > 0; i--) {
+            PrintHex(static_cast<uint8_t>((value >> (4 * i - 4)) & 0xf));
+        }
+    }
+
+    void PrintNumber(uint16_t value)
+    {
+        printk("0x");
+        for (int i = 4; i > 0; i--) {
+            PrintHex(static_cast<uint8_t>((value >> (4 * i - 4)) & 0xf));
+        }
+    }
+
+    void PrintNumber(uint32_t value)
+    {
+        printk("0x");
+        for (int i = 8; i > 0; i--) {
+            PrintHex(static_cast<uint8_t>((value >> (4 * i - 4)) & 0xf));
+        }
+    }
+
+    void PrintNumber(uint64_t value)
+    {
+        printk("0x");
+        for (int i = 16; i > 0; i--) {
+            PrintHex(static_cast<uint8_t>((value >> (4 * i - 4)) & 0xf));
+        }
+    }
+    
+} // namespace
+
 
 // 割り込みディスクリプタテーブル
 alignas(16) std::array<InterruptDescriptor, 256> idt;
@@ -86,6 +175,9 @@ void IntHandlerXHCI(InterruptFrame *frame)
     __attribute__((interrupt)) \
     void IntHandler ## fault_name (InterruptFrame* frame, uint64_t error_code) { \
         printk("[!-- EXCEPTION --!] #"); printk(#fault_name); printk("\n"); \
+        printk("ERROR CODE: "); PrintNumber(error_code); printk("\n"); \
+        printk("RIP: "); PrintNumber(frame->rip); printk("\n"); \
+        printk("RSP: "); PrintNumber(frame->rsp); printk("\n"); \
         while (true) __asm__("hlt"); \
     }
 
@@ -94,6 +186,8 @@ void IntHandlerXHCI(InterruptFrame *frame)
     __attribute__((interrupt)) \
     void IntHandler ## fault_name (InterruptFrame* frame) { \
         printk("[!-- EXCEPTION --!] #"); printk(#fault_name); printk("\n"); \
+        printk("RIP: "); PrintNumber(frame->rip); printk("\n"); \
+        printk("RSP: "); PrintNumber(frame->rsp); printk("\n"); \
         while (true) __asm__("hlt"); \
     }
 

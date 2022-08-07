@@ -126,6 +126,7 @@ namespace usb::xhci
         slot_to_port_.resize(device_size_ + 1);
 
         // デバイスマネージャーの初期化
+        logger->info("[xHC Init] MaxDeviceSlot   %d\n", device_size_);
         devmgr_.Initialize(device_size_);
         opt_->DCBAAP.SetPointer(devmgr_.DeviceContexts());
         logger->info("[xHC Init] DCBAA           %p\n", opt_->DCBAAP.Pointer());
@@ -232,7 +233,6 @@ namespace usb::xhci
         if (!er_.HasFront()) { // イベントリングが空
             return -1;
         }
-
         logger->debug("PROCESS EVENT (%p)\n", er_.Front());
         TRB *event_trb = er_.Front();
         switch (event_trb->bits.trb_type) {
@@ -284,28 +284,27 @@ namespace usb::xhci
             slot_to_port_[slot_id] = addressing_port;
             return AddressDevice(addressing_port, slot_id);
         } else if (issuer_type == AddressDeviceCommandTRB::Type) {
-            /*
             // このコマンドが正常に完了した場合、インプットスロットの内容は、
             // 全てアウトプットスロットの内容にコピーされているはずである。
             // また、EP０の内容もコピーされているはずである。
             Device *dev = devmgr_.FindBySlot(slot_id);
-            port_id = (uint8_t) dev->DeviceContext()->slot_context.root_hub_port_num;
+            port_id = static_cast<uint8_t>(dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num);
             if (addressing_port == 0) return -1;
             if (port_id != addressing_port) return -1;
             if (port_config_phase[port_id] != ConfigPhase::kAddressingDevice) return -1;
  
-            if (dev->DeviceContext()->endpoint_context[0].ep_state) {
-                printk("        EP0 RUNNING\n");
+            if (dev->DeviceContextPtr()->endpoint_context[0].bits.ep_state) {
+                logger->info("[+] EndPoint0 Is Running.\n");
             }
             
             // アドレス割当が完了したので、アドレス処理待ちのポートの実行を行う。
             addressing_port = 0;
-            for (uint32_t i = 1; i <= MaxPorts(); i++) {
+            for (uint8_t i = MaxPorts(); i > 0; i--) {
                 if (port_config_phase[i] == ConfigPhase::kWaitingAddressed) {
                     Port port = PortAt(i);
                     res = ResetPort(&port);
                     if (res == -1) {
-                        printk(">>> Failed to Reset port%02x\n", i);
+                        logger->error("Failed To Reset Port%02hhd\n", i);
                         continue;
                     }
                     break;
@@ -313,11 +312,11 @@ namespace usb::xhci
             }
 
             // ここまでで、デバイスにアドレスを割り当てるのが完了した。
-            // 次は、他のデバイスのアドレス割当を行った行く。
+            // 次は、他のデバイスのアドレス割当を行って行く。
             // 後は、リセット処理が完了次第、イベントリングで実行が進んでいく。
             // ここからは、USBデバイスの初期化をすることになる
             port_config_phase[port_id] = ConfigPhase::kInitializingDevice;
-            dev->StartInitialize(); */
+            dev->StartInitialize();
         } else if (issuer_type == DisableSlotCommandTRB::Type) {
             if (trb->bits.completion_code == 1) {
                 logger->info("[+] SLOT%02d DISABLED.\n", slot_id);
@@ -388,7 +387,26 @@ namespace usb::xhci
 
     int Controller::OnEvent(TransferEventTRB *trb)
     {
+        TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
+        logger->debug("[OnEvent] TransferEvent\n");
+        logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
+        logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
+        logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
+        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
 
+        uint8_t slot_id = trb->bits.slot_id;
+        Device *dev = devmgr_.FindBySlot(slot_id); // デバイスの特定を行う
+        if (dev == NULL) {
+            logger->error("There Are No Device For Issuer TRB.\n");
+            return -1;
+        }
+        dev->OnTransferEventReceived(trb);
+        
+        uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
+/*         if (dev->IsInitialized() &&
+            port_config_phase[port_id] == ConfigPhase::kInitializingDevice) {
+            return ConfigureEndpoints(dev);
+        } */
         return -1;
     }
 
@@ -427,7 +445,9 @@ namespace usb::xhci
             return -1;
         }
         logger->info("[+] ENABLE SLOT FOR PORT%02hhd\n", port->Number());
-        if (port_config_phase[port->Number()] != ConfigPhase::kResettingPort) return -1;
+        if (port_config_phase[port->Number()] != ConfigPhase::kResettingPort) {
+            return -1;
+        }
 
         port->ClearPortResetChange(); // これいらなくない？
         port_config_phase[port->Number()] = ConfigPhase::kEnablingSlot;
@@ -537,11 +557,12 @@ namespace usb::xhci
 
 
 
+
     }
 
     void ProcessEvents()
     {
-        logger->debug("[+] Process Events!!\n");
+        // logger->debug("[+] Process Events!!\n");
         while (xhc->PrimaryEventRing()->HasFront()) {
             xhc->ProcessEvent();
         }

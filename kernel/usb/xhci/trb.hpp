@@ -116,8 +116,6 @@ namespace usb::xhci
         "Vendor Defined",
     };
 
-
-
     // 全てのTRBが取る大まかな構造。
     // TRBクラスは全てuint32_t data[4]という全体へアクセスする
     // ものを持っている。
@@ -208,137 +206,103 @@ namespace usb::xhci
         }
     };
 
-
-
-
-    /* 
-    
-    
-    
-    
-    
-    
-    STOP
-    
-    
-    
-    
-    
-    
-    
-     */
-
-    //  TRB Typeは２
-    struct SetupStageTRB
+    union SetupStageTRB
     {
-        //  リクエストの種類を指定するビットフィールド。
-        //
-        //  第７ビットは、データ転送の流れがhost->deviceなのかdevice-<hostなのかを指定する。
-        //  ０：host->device    １：device->host
-        //
-        //  第５〜６ビットは、Typeを表す。このTypeとは、
-        //  ０：Standard（全てのUSBデバイスがサポートしているリクエスト）
-        //  １〜３：Additional（各デバイスごとに追加で指定するリクエスト）
-        //
-        //  第０〜４ビットは、このリクエストを受信する相手（recipient）を指定する。
-        //  リクエストは、ここで指定した相手に直接届けられる。
-        //  ０：Device
-        //  １：Interface
-        //  ２：Endpoint
-        //  ３：Other
-        uint32_t request_type : 8;
-        //  リクエストの種類をここで指定する。例として、
-        //  ６：GET_DESCRIPTOR
-        //  ０：GET_STATUS
-        //  などがある。
-        uint32_t request : 8;
-        //  リクエストの種類によって使われ方が様々。
-        uint32_t value : 16;
+        static const unsigned int Type = 2;
+        static const unsigned int kNoDataStage = 0;
+        static const unsigned int kOutDataStage = 2;
+        static const unsigned int kInDataStage = 3;
 
-        //  リクエストの種類によって使われ方が様々。
-        //  パラメータを渡す時に用いられる。
-        //  エンドポイントの番号を指定する場合にも用いられる。その場合、
-        //  第０〜３ビットは、エンドポイントの番号を指定するのに用いられる。
-        //
-        //  第７ビットは、方向を指定するのに用いられる。
-        //  ０：OUT
-        //  １：IN
-        uint32_t index : 16;
-        //  コントロール転送時のデータサイズを指定する。
-        //  この値が０の時、Data Stageは存在しないことを示す。
-        uint32_t length : 16;
+        uint32_t data[4];
+        struct {
+            volatile uint32_t request_type : 8;
+            volatile uint32_t request : 8;
+            volatile uint32_t value : 16;
+            volatile uint32_t index : 16;
+            volatile uint32_t length : 16; // コントロール転送時のデータサイズを指定する。
 
-        //  常に８
-        uint32_t trb_transfer_length : 17;
-        uint32_t : 5;
-        //  割り込みの指定。
-        uint32_t interrupter_target : 10;
+            volatile uint32_t trb_transfer_length : 17; // 常に８
+            uint32_t : 5;
+            volatile uint32_t interrupter_target : 10; // 割り込みの指定。
 
-        uint32_t cycle_bit : 1;
-        uint32_t : 4;
-        //  このビットが１にセットされていれば、このTRBの完了を通知するイベントが作成され、
-        //  割り込みも生成されるようになる。
-        uint32_t interrupt_on_completion : 1;
-        //  SetupTRBでは、ここは１にセットしておくと良い。
-        uint32_t immediate_data : 1;
-        uint32_t : 3;
-        //  Setup Stageは２
-        uint32_t trb_type : 6;
-        //  このコントロール転送のデータの向きを指定する。
-        //  ０：No Data Stage 
-        //  ２：OUT Data Stage
-        //  ３：IN Data Stage
-        uint32_t transfer_type : 2;
-        uint32_t : 14;
-    };
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 4;
+            volatile uint32_t interrupt_on_completion : 1; // １をセットすることでイベントの発行＆割り込みが有効になる
+            volatile uint32_t immediate_data : 1;
+            uint32_t : 3;
+            volatile uint32_t trb_type : 6;
+            volatile uint32_t transfer_type : 2; // データの向き（静的変数で定義）
+            uint32_t : 14;
+        } __attribute__((packed)) bits;
+        
+        SetupStageTRB() : data{} {
+            bits.trb_type = Type;
+            bits.immediate_data = true;
+            bits.trb_transfer_length = 8;
+        }
+    } __attribute__((packed));
 
-    //  TRB Typeは３
-    struct DataStageTRB
+    union DataStageTRB
     {
-        //  データバッファへのポインタ。
-        //  アラインメントは１バイトであるが、ユーザは６４バイトや
-        //  １２８バイトに知ることでパフォーマンスを上げることができる。
-        uint64_t data_buffer_pointer;
+        static const uint32_t Type = 3;
+        uint32_t data[4];
+        struct {
+            //  データバッファへのポインタ。
+            //  アラインメントは１バイトであるが、ユーザは６４バイトや
+            //  １２８バイトに知ることでパフォーマンスを上げることができる。
+            volatile uint64_t data_buffer_pointer;
 
-        //  OUTの時は、xHCがこのTRBを実行中に送るデータのバイト数を示す。
-        //  INの時は、データバッファのサイズを指定する。
-        uint32_t trb_transfer_length : 17;
-        uint32_t td_size : 5;
-        uint32_t interrupter_target : 10;
+            //  OUTの時は、xHCがこのTRBを実行中に送るデータのバイト数を示す。
+            //  INの時は、データバッファのサイズを指定する。
+            volatile uint32_t trb_transfer_length : 17;
+            volatile uint32_t td_size : 5;
+            volatile uint32_t interrupter_target : 10;
 
-        uint32_t cycle_bit : 1;
-        //  このビットが立っている時、エンドポイントの状態は保存されず、
-        //  即座に次のTRBを読み込む。
-        uint32_t evaluate_next_trb : 1;
-        uint32_t interrupt_on_short_packet : 1;
-        uint32_t no_snoop : 1;
-        uint32_t chain_bit : 1;
-        uint32_t interrupt_on_completion : 1;
-        uint32_t immediate_data : 1;
-        uint32_t : 3;
-        uint32_t trb_type : 6;
-        uint32_t direction : 1;
-        uint32_t : 15;
-    };
+            volatile uint32_t cycle_bit : 1;
+            //  このビットが立っている時、エンドポイントの状態は保存されず、
+            //  即座に次のTRBを読み込む。
+            volatile uint32_t evaluate_next_trb : 1;
+            volatile uint32_t interrupt_on_short_packet : 1;
+            volatile uint32_t no_snoop : 1;
+            volatile uint32_t chain_bit : 1;
+            volatile uint32_t interrupt_on_completion : 1;
+            volatile uint32_t immediate_data : 1;
+            uint32_t : 3;
+            volatile uint32_t trb_type : 6;
+            volatile uint32_t direction : 1;
+            uint32_t : 15;
+        } __attribute__((packed)) bits;
+
+        DataStageTRB() : data{} {
+            bits.trb_type = Type;
+        }
+    } __attribute__((packed));
     
-    //  TRB Typeは４
-    struct StatusStageTRB
+    union StatusStageTRB
     {
-        uint64_t : 64;
+        static const uint32_t Type = 4;
+        uint32_t data[4];
+        struct {
+            uint64_t : 64;
 
-        uint32_t : 22;
-        uint32_t interrupter_target : 10;
+            uint32_t : 22;
+            uint32_t interrupter_target : 10;
 
-        uint32_t cycle_bit : 1;
-        uint32_t evaluate_next_trb : 1;
-        uint32_t : 2;
-        uint32_t chain_bit : 1;
-        uint32_t interrupt_on_completion : 1;
-        uint32_t : 4;
-        uint32_t trb_type : 6;
-        uint32_t direction : 1;
-        uint32_t : 15;
-    };
+            uint32_t cycle_bit : 1;
+            uint32_t evaluate_next_trb : 1;
+            uint32_t : 2;
+            uint32_t chain_bit : 1;
+            uint32_t interrupt_on_completion : 1;
+            uint32_t : 4;
+            uint32_t trb_type : 6;
+            uint32_t direction : 1;
+            uint32_t : 15;
+        } __attribute__((packed)) bits;
+
+        StatusStageTRB() : data{} {
+            bits.trb_type = Type;
+        }
+    } __attribute__((packed));
     
 
 
