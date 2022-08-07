@@ -30,6 +30,9 @@ namespace usb
         Device *dev_; // このクラスが存在しているUSBデバイスのドライバ
         uint8_t interface_number_; // USBデバイスの中で、このクラスに対応しているInterfaceの番号
 
+        uint32_t last_tick_; // キー入力が最後に検知されたときのタイマーのチック数
+        uint32_t key_stroke_interval_; // キー入力の検知間隔（Ticks）
+
 
         char buf_[256]; // データの受け渡しに使われるバッファ
     };

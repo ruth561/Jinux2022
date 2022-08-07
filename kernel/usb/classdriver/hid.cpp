@@ -1,9 +1,17 @@
 #include "hid.hpp"
 #include "../../logging.hpp"
+#include "../../timer.hpp"
 extern logging::Logger *logger;
+extern TimerManager *timer_manager;
 
 namespace
 {
+    // キーを押す間隔を取り決める
+    // 値が大きいほど長押し中の文字認識料が減る
+    const uint32_t kKeyStrokeInterval = 150;
+
+    // HID Keyboardでデータ構造で先頭の１Byteに置かれるもの
+    // Shiftキーを押下しているかどうかやALtキーについての情報が得られる
     union ModifierKey
     {
         uint8_t data;
@@ -20,16 +28,19 @@ namespace
         ModifierKey(uint8_t key) : data{key} {}
     } __attribute__((packed));
 
+    // Shiftキーが押されていない状態でキーを押された時に出力する文字
+    // 文字コードとの対応表であり、kKeyCord[key_num]で得られるcharが文字となる
     char kKeyCord[] = "\x00\x00\x00\x00" "abcdef" // 0~9
                       "ghijklmnop" // 10~19
                       "qrstuvwxyz" // 20~29
                       "1234567890" // 30~39
-                      "\n\x1b\x7f\t -=[]\\" // 40~49
+                      "\n\x00\x00\00 -=[]\\" // 40~49
                       "\x00;\'\x00,./\x00\x00\x00" // 50~59
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" // 60~69 全てFキー
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" // 70~79 
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";// 80~89
 
+    // Shiftキーが押されているバージョン
     char kKeyCordShift[] = "\x00\x00\x00\x00" "ABCDEF" // 0~9
                       "GHIJKLMNOP" // 10~19
                       "QRSTUVWXYZ" // 20~29
@@ -46,6 +57,8 @@ namespace usb
     void HIDKeyboardDriver::Run()
     {
         logger->debug("HID Class Driver RUN!!\n");
+        last_tick_ = timer_manager->CurrentTick();
+        key_stroke_interval_ = kKeyStrokeInterval;
         SetBootProtocol();
     }
 
@@ -64,7 +77,17 @@ namespace usb
             
             ModifierKey modifier_key{data[0]};
             char key[2] = {0, 0};
+            uint32_t current_tick = timer_manager->CurrentTick(); 
+            if (current_tick < last_tick_ + key_stroke_interval_) {
+                // logger->info("Current Tick: %d, Last Tick: %d\n", current_tick, last_tick_);
+                // 最後に入力検知をしてから十分な時間が立っていなければ出力しない
+                GetKeyInControlPipe();
+                return;
+            }
+            last_tick_ = current_tick; // キー入力の時間を更新
+
             if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
+                // 入力を検知した文字を全て出力する
                 for (int i = 2; i < 8; i++) {
                     if (data[i] < sizeof(kKeyCordShift)) {
                         key[0] = kKeyCordShift[data[i]];
