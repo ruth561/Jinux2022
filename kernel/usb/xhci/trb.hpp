@@ -204,7 +204,7 @@ namespace usb::xhci
         NormalTRB() : data{} {
             bits.trb_type = Type;
         }
-    };
+    } __attribute__((packed));
 
     union SetupStageTRB
     {
@@ -536,11 +536,11 @@ namespace usb::xhci
             bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
         }
 
-/*         ConfigureEndpointCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
+        ConfigureEndpointCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
             bits.trb_type = Type;
             bits.slot_id = slot_id;
             SetPointer(input_context);
-        } */
+        }
     } __attribute__((packed));
     
     union StopEndpointCommandTRB //  xHCがTDを実行するのを一時停止させるコマンド？

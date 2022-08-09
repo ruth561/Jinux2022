@@ -1,7 +1,9 @@
 #include "xhci.hpp"
 
 int printk(const char *format, ...);
+void Halt();
 extern logging::Logger *logger;
+
 namespace pci 
 {
     extern std::vector<Device> devices;
@@ -233,7 +235,7 @@ namespace usb::xhci
         if (!er_.HasFront()) { // イベントリングが空
             return -1;
         }
-        logger->debug("PROCESS EVENT (%p)\n", er_.Front());
+        // logger->debug("PROCESS EVENT (%p)\n", er_.Front());
         TRB *event_trb = er_.Front();
         switch (event_trb->bits.trb_type) {
             case CommandCompletionEventTRB::Type:
@@ -255,6 +257,90 @@ namespace usb::xhci
         return ret;
     }
 
+    int Controller::ConfigureEndpoints(Device *dev)
+    {
+        // USBデバイスの初期化が終わり、Configuration Descriptorの情報などがDeviceオブジェクトに保存されている状態を前提とする。
+        EndpointConfig *configs = dev->EndpointConfigs();
+        int len = dev->NumEndpointConfig();
+        logger->info("[+] ConfigureEndpoints\n");
+        for (int i = 0; i < len; i++) {
+            logger->info("    | DeviceContextIndex: %d\n", configs[i].ep_id.DeviceContextID());
+            logger->info("    | EndPointType: %s\n", usb::kEndpointTypeToName[configs[i].ep_type]);
+            logger->info("    | MaxPacketSize: %d\n", configs[i].max_packet_size);
+            logger->info("    | Interval: %d\n", configs[i].interval);
+        }
+
+        memset(&dev->InputContextPtr()->input_control_context, 0, sizeof(InputControlContext)); //  InputControlContextのデータを０クリアする。
+        //  SlotContextのデータをデバイスコンテキスト内のデータで上書きする。
+        memcpy(&dev->InputContextPtr()->slot_context, &dev->DeviceContextPtr()->slot_context, sizeof(SlotContext));
+        auto slot_ctx = dev->InputContextPtr()->EnableSlotContext();
+        slot_ctx->bits.context_entries = 31;
+
+        // ポートスピードの値からMaxPacketSizeを設定する
+        const uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
+        const int port_speed = PortAt(port_id).Speed();
+        if (port_speed == 0 || port_speed > PortSpeed::kSuperSpeed) {
+            logger->error("[ConfigEndpoint] Port Speed Unsupported\n");
+            return -1;
+        }
+        logger->debug("    | PortSpeed: %d\n", port_speed);
+
+        for (int i = 0; i < len; i++) { // 全てのエンドポイントに対して設定を行ってゆく
+            auto ep_ctx = dev->InputContextPtr()->EnableEndpoint(DeviceContextIndex{configs[i].ep_id.DeviceContextID()});
+            switch (configs[i].ep_type) { // EP type
+                case EndpointType::kControl:
+                    ep_ctx->bits.ep_type = 4;
+                    break;
+                case EndpointType::kIsochronous:
+                    ep_ctx->bits.ep_type = configs[i].ep_id.IsIn() ? 5 : 1;
+                    break;
+                case EndpointType::kBulk:
+                    ep_ctx->bits.ep_type = configs[i].ep_id.IsIn() ? 6 : 2;
+                    break;
+                case EndpointType::kInterrupt:
+                    ep_ctx->bits.ep_type = configs[i].ep_id.IsIn() ? 7 : 3;
+                    break;
+            }
+
+            ep_ctx->bits.max_packet_size = configs[i].max_packet_size;
+            // Intervalの変換
+            if (port_speed == kFullSpeed || port_speed == kLowSpeed) {
+                if (configs[i].ep_type == EndpointType::kInterrupt) {
+                    // 簡単のため、bInterval: configs[i].interval, interval: ep_ctx->bits.intervalと区別して扱う。
+                    // USB仕様では、periods=bInterval*1(ms)で計算されるが、
+                    // xHC仕様では、periods=2^{interval - 1}*125(μs)で計算されるのでこの変換が必要。
+                    // 計算する値は、aを2^a≦bInterval＜2^{a+1}とすると、interval=a+3で設定できる。
+                    int a = 0;
+                    while ((1 << a) < configs[i].interval) a++;
+                    ep_ctx->bits.interval = a + 3;
+                    logger->error("    | This Port Speed %d Is Not Available.\n", port_speed);
+                    return -1;
+                } else {
+                    logger->error("This Pair Of Type And Port Speed Is Not Implemented..\n");
+                    return -1;
+                }
+            } else {
+                ep_ctx->bits.interval = configs[i].interval - 1; // デバイスへのリクエスト間隔（125μs * interval）
+            }
+            ep_ctx->bits.average_trb_length = 1;
+
+            auto tr = dev->AllocTransferRing(DeviceContextIndex{configs[i].ep_id.DeviceContextID()}, 32);
+            ep_ctx->SetTransferRingBuffer(tr->Buffer());
+            ep_ctx->bits.dequeue_cycle_state = 1;
+            ep_ctx->bits.max_primary_streams = 0;
+            ep_ctx->bits.mult = 0;
+            ep_ctx->bits.error_count = 3;
+        }
+
+        port_config_phase[port_id] = ConfigPhase::kConfiguringEndpoints;
+
+        ConfigureEndpointCommandTRB cmd{dev->InputContextPtr(), dev->SlotID()};
+        CommandRing()->Push(&cmd);
+        RingCommandRing();
+
+        return 0;
+    }
+
 
 // Controller(private)
     void Controller::RingCommandRing() {
@@ -272,7 +358,6 @@ namespace usb::xhci
         logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
         logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        
         
         if (issuer_type == EnableSlotCommandTRB::Type) {
             if (port_config_phase[addressing_port] != ConfigPhase::kEnablingSlot) {
@@ -297,7 +382,7 @@ namespace usb::xhci
                 logger->info("[+] EndPoint0 Is Running.\n");
             }
             
-            // アドレス割当が完了したので、アドレス処理待ちのポートの実行を行う。
+            // アドレス割当が完了したので、アドレス処理待ちの他のポートの割当を行う。
             addressing_port = 0;
             for (uint8_t i = MaxPorts(); i > 0; i--) {
                 if (port_config_phase[i] == ConfigPhase::kWaitingAddressed) {
@@ -323,19 +408,20 @@ namespace usb::xhci
                 slot_to_port_[slot_id] = 0;
                 devmgr_.DisableSlot(slot_id); // デバイス用に確保したメモリ領域を確保などする
             }
-        } else if (issuer_type == 12) { // Configure Endpoint Command
-/*             Device *dev = devmgr_.FindBySlot(slot_id);
+        } else if (issuer_type == ConfigureEndpointCommandTRB::Type) {
+            Device *dev = devmgr_.FindBySlot(slot_id);
             if (dev == nullptr) {
-                printk("[Error] ConfigureEndpointCommand\n");
+                logger->error("[OnEvent::ConfigureEndpointCommand]\n");
                 return -1;
             }
 
-            port_id = dev->DeviceContext()->slot_context.root_hub_port_num;
+            port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
             if (port_config_phase[port_id] != ConfigPhase::kConfiguringEndpoints) {
                 return -1;
             }
-
-            return CompleteConfiguration(port_id, slot_id); */
+            logger->info("[+] Completed Configure Endpoint!\n");
+            logger->info("DeviceContextPtr(): %p\n", dev->DeviceContextPtr());
+            return CompleteConfiguration(port_id, slot_id);
         }
 
         return 0;
@@ -388,11 +474,14 @@ namespace usb::xhci
     int Controller::OnEvent(TransferEventTRB *trb)
     {
         TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
+        logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
+        logger->set_level(logging::kINFO);
         logger->debug("[OnEvent] TransferEvent\n");
         logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
         logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
         logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        logger->set_level(current_level);
 
         uint8_t slot_id = trb->bits.slot_id;
         Device *dev = devmgr_.FindBySlot(slot_id); // デバイスの特定を行う
@@ -403,10 +492,11 @@ namespace usb::xhci
         dev->OnTransferEventReceived(trb);
         
         uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
-/*         if (dev->IsInitialized() &&
+
+        if (dev->IsInitialized() &&
             port_config_phase[port_id] == ConfigPhase::kInitializingDevice) {
-            return ConfigureEndpoints(dev);
-        } */
+            return ConfigureEndpoints(dev); // 呼ばれていない。。。
+        }
         return -1;
     }
 
@@ -525,7 +615,20 @@ namespace usb::xhci
 
         return 0;
     }
+    
+    int Controller::CompleteConfiguration(uint8_t port_id, uint8_t slot_id)
+    {
+        logger->info("[+] Port%02d(Slot%02d) Reached To Configured State\n", port_id, slot_id);
 
+        Device *dev = devmgr_.FindBySlot(slot_id);
+        if (dev == NULL) {
+            logger->error("Device Is Not Exist.\n");
+            return -1;
+        }
+        dev->OnEndpointsConfigured();
+        port_config_phase[port_id] = ConfigPhase::kConfigured;
+        return 0;
+    }
 
 
     Controller *xhc;

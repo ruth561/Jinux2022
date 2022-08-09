@@ -9,6 +9,15 @@
 
 namespace usb::xhci
 {
+    enum PortSpeed
+    {
+        kFullSpeed = 1,
+        kLowSpeed = 2,
+        kHighSpeed = 3,
+        kSuperSpeed = 4,
+        kSuperSpeedPlus = 5,
+    };
+    
     //  ポート関連のレジスタを保持するクラス
     //  このクラスのオブジェクトを生成すると、その時点での
     //  PortRegisterSetの内容が反映され、各メンバ関数を用いてそのデータを読み書きすることができる。

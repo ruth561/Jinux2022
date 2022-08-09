@@ -13,87 +13,16 @@
 
 int printk(const char *format, ...);
 
-namespace
-{
-    using namespace usb;
-
-/*     const int kEventWaitersMapSize = 32;
-
-    bool CompareSetupData(SetupData *setup1, SetupData *setup2)
-    {
-        if (setup1->index != setup2->index) return false;    printk("index\n");
-        if (setup1->length != setup2->length) return false;  printk("length\n");
-        if (setup1->request != setup2->request) return false;  printk("request\n");
-        if (setup1->request_type.data != setup2->request_type.data) return false;  printk("request_data\n");
-        if (setup1->value != setup2->value) return false;  printk("value\n");
-
-        return true;
-    } */
-
-    //  イベントを待つクラスドライバと、そのイベントのセットアップデータの組を保持する辞書。
-/*     class EventWaitersMap
-    {
-    public:
-        //  setup_dataに関連するクラスドライバを返す
-        ClassDriver *Get(SetupData *setup_data)
-        {
-            for (int i = 0; i < kEventWaitersMapSize; i++) {
-                // if (dict_[i][0]) {
-                //    printk("dict_[%d][0]=0x%016lx issuer_trb=0x%016lx\n", i, dict_[i][0], issuer_trb);
-                //}
-                if (dict_[i][0]) {
-                    printk("dict_[%d][0]=0x%016lx issuer_trb=0x%016lx\n", i, dict_[i][0], setup_data);
-                    if (CompareSetupData((SetupData *) dict_[i][0], setup_data)) {
-                        printk("correspond!!\n");
-                        return (ClassDriver *) dict_[i][1];
-                    }
-                }
-            }
-            return NULL;
-        }
-
-
-        //  成功すれば０を、失敗すれば−１を返す。
-        int Put(SetupData *setup_data, ClassDriver *class_driver)
-        {
-            for (int i = 0; i < kEventWaitersMapSize; i++) {
-                if (dict_[i][0] == NULL) {
-                    printk("put setup %lx class %lx\n", setup_data, class_driver);
-                    dict_[i][0] = (void *) setup_data;
-                    dict_[i][1] = (void *) class_driver;
-                    return 0;
-                }
-            }
-            return -1;
-        }
-
-        //  指定したTRBとセットアップTRBの組のデータを廃棄する
-        void Delete(SetupData *setup_data) {
-            for (int i = 0; i < kEventWaitersMapSize; i++) {
-                if (CompareSetupData((SetupData *) dict_[i][0], setup_data)) {
-                    dict_[i][0] = NULL;
-                    dict_[i][1] = NULL;
-                    break;
-                }
-            }
-        }
-
-    private:
-        //  イベントを発行するTRBとそれに関連するSetupTRBの組を保持する。
-        //  組の数は、kSetupStageMapSizeで指定される。
-        void *dict_[kEventWaitersMapSize][2] = {};
-    };
- */
-}
-
 namespace usb
 {
     class Device 
     {
     public:
-        virtual int ControlIn(EndpointID ep_id, SetupData setup_data, void *buf, int len) { return -1; };
+        virtual int ControlIn(EndpointID ep_id, SetupData setup_data, void *buf, int len) { return -1; }
+        virtual int ControlOut(EndpointID ep_id, SetupData setup_data, void* buf, int len) { return -1; }
 
-        virtual int ControlOut(EndpointID ep_id, SetupData setup_data, void* buf, int len) { return -1; };
+        virtual int InterruptIn(EndpointID ep_id, void *buf, int len) { return -1; }
+        virtual int InterruptOut(EndpointID ep_id, void *buf, int len) { return -1; }
  
         // デバイスディスクリプタの取得をリクエスト
         int StartInitialize();
@@ -115,15 +44,18 @@ namespace usb
         //  len：実際に送受信したデータサイズ
         int OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len);
         
+        // InterruptEndpointにデータが返された時
+        int OnInterruptCompleted(EndpointID ep_id, void *buf, int len);
+
         //  各エンドポイントに設定が終わった時に呼ばれる関数。
         //  クラスドライバのOnEndpointsConfigured()を呼び出す。
         int OnEndpointsConfigured();
 
         bool IsInitialized() { return is_initialized_; }
 
-/*         //  このクラスの使用するエンドポイントのコンフィグ情報が詰まった配列を返す。
+        //  このクラスの使用するエンドポイントのコンフィグ情報が詰まった配列を返す。
         EndpointConfig *EndpointConfigs() { return ep_configs_; }
-        int NumEndpointConfig() { return num_ep_configs_; } */
+        int NumEndpointConfig() { return num_ep_configs_; }
 
     private:
         //  コントロール転送でデータをやり取りするのに用いられるメモリ領域。
@@ -150,8 +82,6 @@ namespace usb
         //  初期化処理は５段階に分けて行われる。イベントリングからの通知の時、
         //  今どの段階にいるのかを示してくれる。
         int initialize_phase_ = 0;
-
-        // EventWaitersMap event_waiters_;
 
         //  スタンダードデバイスリクエストの中のGET_DESCRIPTORを発行するプロシージャ。
         //  bufには、ディスクリプタのデータが格納される。lenはbufのサイズである。

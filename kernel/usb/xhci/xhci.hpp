@@ -33,12 +33,17 @@ namespace usb::xhci
 
         Port PortAt(uint8_t port_num); // １ ≦ port_num ≦ MaxPorts()
 
-
         void SendNoOpCommand(); //  コントローラーにNoOpCommandTRBを送りドアベルを鳴らす
 
         //  現在イベントリングに溜まっている次のイベントを処理する。
         //  無事実行が完了したら０、失敗したら−１を返す。
         int ProcessEvent();
+
+        //  指定したデバイスの各エンドポイントの設定を行う。
+        //  デバイスの初期化処理が完了した後に呼び出される。
+        //  デバイスのオブジェクトには、このOSで使用可能なインターフェースの
+        //  使用するエンドポイントが列挙されている。
+        int ConfigureEndpoints(Device *dev);
     
     private:
         uint8_t device_size_; // デバイススロットの有効化数 
@@ -83,12 +88,6 @@ namespace usb::xhci
         //  失敗した場合は、−１を返す。
         //  コマンド完了イベントの処理は、他の関数に任せている。
         int AddressDevice(uint8_t port_id, uint8_t slot_id);
-
-        //  指定したデバイスの各エンドポイントの設定を行う。
-        //  デバイスの初期化処理が完了した後に呼び出される。
-        //  デバイスのオブジェクトには、このOSで使用可能なインターフェースの
-        //  使用するエンドポイントが列挙されている。
-        // int ConfigureEndpoints(Device *dev);
 
         int CompleteConfiguration(uint8_t port_id, uint8_t slot_id);
     }; 

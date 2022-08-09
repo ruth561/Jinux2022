@@ -18,10 +18,19 @@ namespace usb
         // デバイスがConfiguredになったらUSBデバイスドライバから呼び出される
         void Run() override;
 
-        // デバイスからの返信
+        //  エンドポイントの設定が終わった後に呼び出される関数。
+        //  デバイスに対し、プロトコルをブートプロトコルを使うように指示する。
+        //  EP０を用いて行われる。
+        void OnEndpointsConfigured() override;
+
+        // デバイスからの返信がxHC->USBドライバを経由して
         void OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len) override;
 
+        // デフォルトコントロールパイプにGET_REPORTリクエストを投げかける関数
         void GetKeyInControlPipe();
+
+        // Interrupt Endpointで受け取れるようにリクエストを投げる
+        void RequestKeyViaIntEP();
 
         // 使用するプロトコルをブートプロトコルに設定するリクエストを発行
         void SetBootProtocol();

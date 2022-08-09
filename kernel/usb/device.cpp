@@ -85,7 +85,6 @@ namespace usb
         logger->debug("    | NumInterfaces: %d\n", config_desc->num_interfaces);
 
         ConfigurationDescriptorReader config_reader((uint8_t *) config_desc, len);
-        // ClassDriver *class_driver = nullptr;
         num_ep_configs_ = 0;
         while (config_reader.Next())
         {
@@ -105,39 +104,39 @@ namespace usb
 
                 uint32_t class_number = (static_cast<uint32_t>(interface_desc->interface_class) << 16) 
                     | (static_cast<uint32_t>(interface_desc->interface_sub_class) << 8)
-                    | static_cast<uint32_t>(interface_desc->interface_protocol);
-                logger->debug("Class NUmber: %06x\n", class_number);
+                    | (static_cast<uint32_t>(interface_desc->interface_protocol));
+                // logger->debug("Class Number: %06x\n", class_number);
+                // クラスドライバーの選択
                 if (class_number == 0x030101) { // HID BOOT INTERFACE (KEYBOARD)
                     class_drivers_[interface_desc->interface_number] = new HIDKeyboardDriver(this, interface_desc->interface_number);
-                } /* else if (class_number == 0x030102) { // HID BOOT INTERFACE (MOUSE)
+                } 
+                /* else if (class_number == 0x030102) { // HID BOOT INTERFACE (MOUSE)
                     class_drivers_[interface_desc->interface_number] = new HIDClassDriver(this, interface_desc->interface_number);
                 } */
             } else if (desc_type == descriptor_type::kEndpoint) {
-                /*  Endpoint Descriptor */
                 EndpointDescriptor *ep_desc = (EndpointDescriptor *) config_reader.Addr();
                 logger->debug("    | [ENDPOINT]\n");
                 logger->debug("         | EndpointAddress: 0x%x\n", ep_desc->endpoint_address);
                 logger->debug("         | MaxPacketSize: %d\n", ep_desc->max_packet_size);
+                logger->debug("         | Interval: %d\n", ep_desc->interval);
 
-                /* if (class_driver) {
-                    EndpointConfig conf = {};
-                    conf.ep_id = EndpointID(ep_desc->endpoint_address.bits.number, 
-                                            ep_desc->endpoint_address.bits.dir_in == 1);
-                    conf.ep_type = (EndpointType) (ep_desc->attributes.bits.transfer_type);
-                    conf.max_packet_size = ep_desc->max_packet_size;
-                    conf.interval = ep_desc->interval;
-                    ep_configs_[num_ep_configs_] = conf;
-                    num_ep_configs_++;
-                    class_drivers_[conf.ep_id.EndpointNumber()] = class_driver;
-                } */
+                EndpointConfig conf = {};
+                conf.ep_id = EndpointID(ep_desc->endpoint_address.bits.number, 
+                                        ep_desc->endpoint_address.bits.dir_in == 1);
+                conf.ep_type = (EndpointType) (ep_desc->attributes.bits.transfer_type);
+                conf.max_packet_size = ep_desc->max_packet_size;
+                conf.interval = ep_desc->interval;
+                ep_configs_[num_ep_configs_] = conf;
+                num_ep_configs_++;
+                
             } else if (desc_type == descriptor_type::kHID) {
                 HIDDescriptorReader hid_desc_reader((HIDDescriptorHeader *) config_reader.Addr());
                 logger->debug("    | [HID]\n");
                 logger->debug("         | CountryCode: %d\n", hid_desc_reader.desc_->country_code);
                 logger->debug("         | ClassDescriptorNum: %d\n", hid_desc_reader.desc_->num_descriptors);
-                uint8_t hid_class_index = 0;
+                /* uint8_t hid_class_index = 0;
                 HIDClassDescriptor *hid_class_desc;
-                /* while (1) {
+                while (1) {
                     hid_class_desc = hid_desc_reader.GetClassDescriptor(hid_class_index);
                     if (hid_class_desc == nullptr) break;
                     printk("        DescriptorType: %d\n", hid_class_desc->descriptor_type);
@@ -151,11 +150,6 @@ namespace usb
 
         }
 
-        /* if (!class_driver) {
-            printk("[ERROR] This USB device is not supported\n");
-            return -1;
-        } */
-
         initialize_phase_ = 3;
         return SetConfiguration(kDefaultControlPipeID, config_desc->configuration_value);
     }
@@ -163,22 +157,15 @@ namespace usb
     int Device::InitializePhase3(uint8_t config_value)
     {
         logger->info("[+] SET CONFIGURATION %d!!\n", config_value);
-        for (int i = 0; i < sizeof(class_drivers_) / sizeof(class_drivers_[0]); ++i) {
-            if (class_drivers_[i]) {
-                logger->debug("ClassDriver: %p\n", class_drivers_[i]);
-                class_drivers_[i]->Run();
-            }
-        }
         initialize_phase_ = 4;
         is_initialized_ = true;
         logger->info("[+] Device Configured.\n");
         return 0;
     }
-
-    
+  
     int Device::OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len)
     {
-        logger->debug("[Device::OnControlCompleted] buf: %p, len: %d\n", buf, len);
+        // logger->debug("[Device::OnControlCompleted] buf: %p, len: %d\n", buf, len);
         if (is_initialized_) { // 初期化が完了している時
         /* 
         
@@ -216,8 +203,22 @@ namespace usb
         return -1;
     }
 
+    int Device::OnInterruptCompleted(EndpointID ep_id, void *buf, int len)
+    {
+        printk("OnInterruptCompleted!!\n");
+        return -1;
+    }
 
-
+    int Device::OnEndpointsConfigured()
+    {
+        for (int i = 0; i < sizeof(class_drivers_) / sizeof(class_drivers_[0]); ++i) {
+            if (class_drivers_[i]) {
+                logger->debug("ClassDriver: %p\n", class_drivers_[i]);
+                class_drivers_[i]->OnEndpointsConfigured();
+            }
+        }
+        return 0;
+    }
 
     int Device::GetDescriptor(EndpointID ep_id, uint8_t desc_type, uint8_t desc_index, void *buf, int len)
     {

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "registers.hpp"
 #include "context.hpp"
+#include "trb.hpp"
 #include "../memory.hpp"
 #include "../endpoint.hpp"
 #include "../device.hpp"
@@ -66,7 +67,7 @@ namespace usb::xhci
     };
 
 
-    class Device : public usb::Device
+    class Device : public usb::Device 
     {
     public:
         Device(uint8_t slot_id, DoorbellRegister *doorbell);
@@ -93,9 +94,10 @@ namespace usb::xhci
         //  bufがNULLの時は、setup->statusというTRBを送信する。
         //  bufがNULLでない時は、setup->data->statusというTRBを送信する。
         int ControlIn(EndpointID ep_id, SetupData setup_data, void *buf, int len) override;
-
         int ControlOut(EndpointID ep_id, SetupData setup_data, void* buf, int len) override;
         
+        int InterruptIn(EndpointID ep_id, void *buf, int len) override;
+        int InterruptOut(EndpointID ep_id, void *buf, int len) override;
         
         //  TransferEventを受け取った時に実行されるメンバ関数。
         //  引数には、そのイベントTRBへのポインタが渡される。

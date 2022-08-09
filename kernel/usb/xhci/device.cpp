@@ -51,7 +51,7 @@ namespace usb::xhci
     Device::Device(uint8_t slot_id, DoorbellRegister *doorbell) : 
         slot_id_(slot_id), 
         doorbell_(doorbell) {}
-    
+     
     int Device::Initialize()
     {
         dev_ctx_ = reinterpret_cast<DeviceContext *>(usb::AllocMem(sizeof(struct DeviceContext), 64, 0x1000));
@@ -177,9 +177,36 @@ namespace usb::xhci
         return 0;
     }
 
+    int Device::InterruptIn(EndpointID ep_id, void *buf, int len)
+    {
+        if (buf == nullptr) {
+            logger->error("[InterruptIn] Data Buffer Is Null.\n");
+            return -1;
+        }
+        NormalTRB normal_trb{};
+        normal_trb.bits.data_buffer_pointer = reinterpret_cast<uint64_t>(buf);
+        normal_trb.bits.trb_transfer_length = len;
+        normal_trb.bits.interrupt_on_completion = true;
+        normal_trb.bits.interrupt_on_short_packet = true; // ShortPacketでも良いとする
+        normal_trb.bits.interrupter_target = 0; // Primary Event
+
+        uint8_t dci = ep_id.DeviceContextID();
+        transfer_rings_[dci]->Push(&normal_trb);
+        doorbell_->Ring(dci, 0);
+        return 0;
+    }
+
+    int Device::InterruptOut(EndpointID ep_id, void *buf, int len)
+    {
+        /* 
+        未実装、、、
+         */
+        return -1;
+    }
+
     int Device::OnTransferEventReceived(TransferEventTRB *trb)
     {
-        logger->debug("[Device::OnTransferEventReceived]\n");
+        // logger->debug("[Device::OnTransferEventReceived]\n");
         int residual_length = trb->bits.trb_transfer_length;
 
         if (trb->bits.completion_code != 1 &&
@@ -207,22 +234,27 @@ namespace usb::xhci
         setup_data.index = setup_stage_trb->bits.index;
         setup_data.length = setup_stage_trb->bits.length;
 
-        void *data_stage_buf = NULL;
-        int transfer_length = 0;
-        if (issuer_trb->bits.trb_type == 3) {  //  DataStageTRB
-            logger->debug("DATA STAGE TRB!!\n");
-            DataStageTRB *data_stage_trb = reinterpret_cast<DataStageTRB *>(issuer_trb);
-            data_stage_buf = reinterpret_cast<void *>(data_stage_trb->bits.data_buffer_pointer);
-            transfer_length = data_stage_trb->bits.trb_transfer_length - residual_length;    //  実際のバッファの大きさ。
-        } else if (issuer_trb->bits.trb_type == 4) { //  StatusStageTRB
-            logger->debug("STATUS STAGE TRB!!\n");
-            //  pass
-        } else {
-            return -1;
-        }
-
+        void *buf = NULL;
+        int length = 0;
         EndpointID ep_id{DeviceContextIndex{static_cast<uint8_t>(trb->bits.endpoint_id)}};
-        return OnControlCompleted(ep_id, setup_data, data_stage_buf, transfer_length);
+        if (issuer_trb->bits.trb_type == 3) {  //  DataStageTRB
+            // logger->debug("DATA STAGE TRB!!\n");
+            DataStageTRB *data_stage_trb = reinterpret_cast<DataStageTRB *>(issuer_trb);
+            buf = reinterpret_cast<void *>(data_stage_trb->bits.data_buffer_pointer);
+            length = data_stage_trb->bits.trb_transfer_length - residual_length;    //  実際のバッファの大きさ。
+            return OnControlCompleted(ep_id, setup_data, buf, length);
+        } else if (issuer_trb->bits.trb_type == 4) { //  StatusStageTRB
+            // logger->debug("STATUS STAGE TRB!!\n");
+            //  pass
+        } else if (issuer_trb->bits.trb_type == 1) { // NormalTRB
+            NormalTRB *normal = reinterpret_cast<NormalTRB *>(issuer_trb);
+            buf = reinterpret_cast<void *>(normal->bits.data_buffer_pointer);
+            length = normal->bits.trb_transfer_length - residual_length;
+            printk("NORMAL TRB!!!!!!!!!!!!!!!\n");
+            return OnInterruptCompleted(ep_id, buf, length);
+        } 
+
+        return 0;
     }
 
 }

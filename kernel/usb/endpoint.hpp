@@ -41,13 +41,10 @@ namespace usb
     {
         //  エンドポイントID
         EndpointID ep_id;
-
         //  エンドポイントのタイプ
         EndpointType ep_type;
-
         // このエンドポイントの最大パケットサイズ（バイト）
         int max_packet_size;
-
         // このエンドポイントの制御周期（125*2^(interval-1) マイクロ秒）
         int interval;
     };

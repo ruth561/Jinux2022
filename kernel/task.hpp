@@ -92,6 +92,7 @@ public:
 
     int SendMessage(uint64_t id, Message msg); // タスクidのメッセージキューにmsgをpushする。成功０、失敗−１
     Task *CurrentTask(); // 現在実行中のTaskオブジェクトへのポインタを返す
+    int NumRunningTasks(); // runningのタスクの数を返す
 
 private:
     std::vector<Task *> tasks_{}; // 作成したタスクを全て格納するもの

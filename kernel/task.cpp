@@ -235,6 +235,15 @@ Task *TaskManager::CurrentTask()
     return running_[current_level_].front();
 }
 
+int TaskManager::NumRunningTasks()
+{
+    int res = 0;
+    for (int i = 0; i < kMaxLevel + 1; i++) {
+        res += running_[i].size();
+    }
+    return res;
+}
+
 void TaskManager::ChangeLevelRunning(Task *task, int level)
 {
     if (level < 0 || level == task->Level()) { // levelが変わっていない場合や変更しない場合は無視する

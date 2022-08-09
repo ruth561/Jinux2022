@@ -3,6 +3,7 @@
 #include "../../timer.hpp"
 extern logging::Logger *logger;
 extern TimerManager *timer_manager;
+void Halt(); 
 
 namespace
 {
@@ -62,11 +63,17 @@ namespace usb
         SetBootProtocol();
     }
 
+    void HIDKeyboardDriver::OnEndpointsConfigured()
+    {
+        Run();
+    }
+
     void HIDKeyboardDriver::OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len)
     {
         if (setup_data.request == request::kSetProtocol) {
             logger->debug("Set Boot Protocol Done.\n");
             GetKeyInControlPipe();
+            // RequestKeyViaIntEP();
             return;
         } else if (setup_data.request == request::kGetReport) {
             logger->debug("Received Data From HID Device!!\n");
@@ -116,8 +123,17 @@ namespace usb
         setup_data.index = static_cast<uint16_t>(interface_number_) & 0xff; // |15  Reserved 8|7  Interface 0|という構造
         setup_data.length = 8;
         dev_->ControlIn(kDefaultControlPipeID, setup_data, buf_, sizeof(buf_));
-        logger->debug("Send Report Request!! buf_: %p\n", buf_);
+        // Halt();
+        logger->set_level(logging::kINFO);
+        // logger->debug("Send Report Request!! buf_: %p\n", buf_);
     }
+
+    void HIDKeyboardDriver::RequestKeyViaIntEP()
+    {
+        dev_->InterruptIn(EndpointID{xhci::DeviceContextIndex{3}}, buf_, sizeof(buf_));
+        logger->debug("-------- RequestKeyViaIntEP() ----------\n");
+    }
+
 
     void HIDKeyboardDriver::SetBootProtocol()
     {
