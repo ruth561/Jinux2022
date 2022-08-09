@@ -199,12 +199,14 @@ namespace usb
         } else if (initialize_phase_ == 3) {
             return InitializePhase3(setup_data.value & 0xffu);
         }
-
         return -1;
     }
 
     int Device::OnInterruptCompleted(EndpointID ep_id, void *buf, int len)
     {
+        /* 
+        エンドポイントの番号から対象のクラスドライバを選択し、クラスドライバのOnInterruptCompletedを呼び出す
+         */
         printk("OnInterruptCompleted!!\n");
         return -1;
     }
@@ -244,6 +246,7 @@ namespace usb
         setup_data.value = config_value; // 上位１ByteはReservedなので、、
         setup_data.index = 0;
         setup_data.length = 0;
+        // printk("SetConfiguration\n");
         return ControlOut(ep_id, setup_data, nullptr, 0); // データ領域は特になし
     }
 

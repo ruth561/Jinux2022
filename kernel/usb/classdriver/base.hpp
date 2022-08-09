@@ -19,5 +19,7 @@ namespace usb
 
         // コントロール転送への返信が来た時に呼ばれる
         virtual void OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len) {}
+
+        virtual void OnInterruptCompleted(EndpointID ep_id, void *buf, int len) {}
     };
 }

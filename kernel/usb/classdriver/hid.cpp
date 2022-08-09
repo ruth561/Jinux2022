@@ -72,14 +72,14 @@ namespace usb
     {
         if (setup_data.request == request::kSetProtocol) {
             logger->debug("Set Boot Protocol Done.\n");
-            GetKeyInControlPipe();
-            // RequestKeyViaIntEP();
+            // GetKeyInControlPipe();
+            RequestKeyCodeViaIntEP();
             return;
         } else if (setup_data.request == request::kGetReport) {
-            logger->debug("Received Data From HID Device!!\n");
+            // logger->debug("Received Data From HID Device!!\n");
             uint8_t *data;
             data = reinterpret_cast<uint8_t *>(buf);
-/*             logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
+            /* logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
                 data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]); */
             
             ModifierKey modifier_key{data[0]};
@@ -114,6 +114,45 @@ namespace usb
         }
     }
 
+    void HIDKeyboardDriver::OnInterruptCompleted(EndpointID ep_id, void *buf, int len)
+    {
+        // logger->debug("Received Data From HID Device!!\n");
+        uint8_t *data;
+        data = reinterpret_cast<uint8_t *>(buf);
+        logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
+            data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+        
+        ModifierKey modifier_key{data[0]};
+        char key[2] = {0, 0};
+        uint32_t current_tick = timer_manager->CurrentTick(); 
+        if (current_tick < last_tick_ + key_stroke_interval_) {
+            // logger->info("Current Tick: %d, Last Tick: %d\n", current_tick, last_tick_);
+            // 最後に入力検知をしてから十分な時間が立っていなければ出力しない
+            RequestKeyCodeViaIntEP();
+            return;
+        }
+        last_tick_ = current_tick; // キー入力の時間を更新
+
+        if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
+            // 入力を検知した文字を全て出力する
+            for (int i = 2; i < 8; i++) {
+                if (data[i] < sizeof(kKeyCordShift)) {
+                    key[0] = kKeyCordShift[data[i]];
+                    printk(key);
+                }
+            }
+        } else {
+            for (int i = 2; i < 8; i++) {
+                if (data[i] < sizeof(kKeyCord)) {
+                    key[0] = kKeyCord[data[i]];
+                    printk(key);
+                }
+            }
+        }
+
+        RequestKeyCodeViaIntEP();
+    }
+
     void HIDKeyboardDriver::GetKeyInControlPipe()
     {
         SetupData setup_data = {};
@@ -124,14 +163,13 @@ namespace usb
         setup_data.length = 8;
         dev_->ControlIn(kDefaultControlPipeID, setup_data, buf_, sizeof(buf_));
         // Halt();
-        logger->set_level(logging::kINFO);
+        // logger->set_level(logging::kINFO);
         // logger->debug("Send Report Request!! buf_: %p\n", buf_);
     }
 
-    void HIDKeyboardDriver::RequestKeyViaIntEP()
+    void HIDKeyboardDriver::RequestKeyCodeViaIntEP()
     {
         dev_->InterruptIn(EndpointID{xhci::DeviceContextIndex{3}}, buf_, sizeof(buf_));
-        logger->debug("-------- RequestKeyViaIntEP() ----------\n");
     }
 
 

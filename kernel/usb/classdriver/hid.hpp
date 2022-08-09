@@ -26,11 +26,14 @@ namespace usb
         // デバイスからの返信がxHC->USBドライバを経由して
         void OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len) override;
 
+        // 割り込みパイプ経由でのデータの受信
+        void OnInterruptCompleted(EndpointID ep_id, void *buf, int len) override;
+
         // デフォルトコントロールパイプにGET_REPORTリクエストを投げかける関数
         void GetKeyInControlPipe();
 
         // Interrupt Endpointで受け取れるようにリクエストを投げる
-        void RequestKeyViaIntEP();
+        void RequestKeyCodeViaIntEP();
 
         // 使用するプロトコルをブートプロトコルに設定するリクエストを発行
         void SetBootProtocol();

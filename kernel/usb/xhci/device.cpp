@@ -206,8 +206,10 @@ namespace usb::xhci
 
     int Device::OnTransferEventReceived(TransferEventTRB *trb)
     {
-        // logger->debug("[Device::OnTransferEventReceived]\n");
-        int residual_length = trb->bits.trb_transfer_length;
+        void *buf = NULL; // TRBで使ったバッファへのポインタ
+        int length = 0; // バッファの長さ
+        int residual_length = trb->bits.trb_transfer_length; // バッファの余った部分の領域のサイズ
+        EndpointID ep_id{DeviceContextIndex{static_cast<uint8_t>(trb->bits.endpoint_id)}}; // 使われたエンドポイント
 
         if (trb->bits.completion_code != 1 &&
             trb->bits.completion_code != 13) {
@@ -216,8 +218,18 @@ namespace usb::xhci
                 return -1;
         }
 
-        // このイベントを発行したTransfer TRBへのポインタ。
-        TRB *issuer_trb = trb->Pointer();
+        TRB *issuer_trb = trb->Pointer(); // 対象となるTRBへのポインタ
+        if (issuer_trb->bits.trb_type == 1) { // NormalTRBの時
+            NormalTRB *normal = reinterpret_cast<NormalTRB *>(issuer_trb);
+            buf = reinterpret_cast<void *>(normal->bits.data_buffer_pointer);
+            length = normal->bits.trb_transfer_length - residual_length;
+            return OnInterruptCompleted(ep_id, buf, length);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
+        // 以降は、setup->(data)->statusという組のコントロール転送に関するコード //
+        ///////////////////////////////////////////////////////////////////////////
+
         // セットアップTRBを取得する。
         SetupStageTRB *setup_stage_trb = setup_stage_map.Get(issuer_trb);
         if (setup_stage_trb == NULL) {
@@ -234,9 +246,6 @@ namespace usb::xhci
         setup_data.index = setup_stage_trb->bits.index;
         setup_data.length = setup_stage_trb->bits.length;
 
-        void *buf = NULL;
-        int length = 0;
-        EndpointID ep_id{DeviceContextIndex{static_cast<uint8_t>(trb->bits.endpoint_id)}};
         if (issuer_trb->bits.trb_type == 3) {  //  DataStageTRB
             // logger->debug("DATA STAGE TRB!!\n");
             DataStageTRB *data_stage_trb = reinterpret_cast<DataStageTRB *>(issuer_trb);
@@ -244,17 +253,11 @@ namespace usb::xhci
             length = data_stage_trb->bits.trb_transfer_length - residual_length;    //  実際のバッファの大きさ。
             return OnControlCompleted(ep_id, setup_data, buf, length);
         } else if (issuer_trb->bits.trb_type == 4) { //  StatusStageTRB
-            // logger->debug("STATUS STAGE TRB!!\n");
-            //  pass
-        } else if (issuer_trb->bits.trb_type == 1) { // NormalTRB
-            NormalTRB *normal = reinterpret_cast<NormalTRB *>(issuer_trb);
-            buf = reinterpret_cast<void *>(normal->bits.data_buffer_pointer);
-            length = normal->bits.trb_transfer_length - residual_length;
-            printk("NORMAL TRB!!!!!!!!!!!!!!!\n");
-            return OnInterruptCompleted(ep_id, buf, length);
-        } 
+            return OnControlCompleted(ep_id, setup_data, buf, length);
+        }
 
-        return 0;
+        logger->error("This Transfer Ring TRB Type Is Invalid.\n");
+        return -1; 
     }
 
 }

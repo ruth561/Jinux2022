@@ -70,7 +70,7 @@ extern "C" void KernelMainNewStack(
 
     usb::xhci::Initialize(); // xHCの初期化 
 
-   /*  while (true) {
+    /* while (true) {
         usb::xhci::ProcessEvents(); 
     } */
 
