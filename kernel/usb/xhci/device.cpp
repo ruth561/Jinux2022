@@ -210,6 +210,7 @@ namespace usb::xhci
         int length = 0; // バッファの長さ
         int residual_length = trb->bits.trb_transfer_length; // バッファの余った部分の領域のサイズ
         EndpointID ep_id{DeviceContextIndex{static_cast<uint8_t>(trb->bits.endpoint_id)}}; // 使われたエンドポイント
+        printk("[Device::OnTransferEventReceived]\n");
 
         if (trb->bits.completion_code != 1 &&
             trb->bits.completion_code != 13) {
@@ -220,6 +221,7 @@ namespace usb::xhci
 
         TRB *issuer_trb = trb->Pointer(); // 対象となるTRBへのポインタ
         if (issuer_trb->bits.trb_type == 1) { // NormalTRBの時
+            printk("NORMAL TRB!!\n");
             NormalTRB *normal = reinterpret_cast<NormalTRB *>(issuer_trb);
             buf = reinterpret_cast<void *>(normal->bits.data_buffer_pointer);
             length = normal->bits.trb_transfer_length - residual_length;
@@ -245,9 +247,8 @@ namespace usb::xhci
         setup_data.value = setup_stage_trb->bits.value;
         setup_data.index = setup_stage_trb->bits.index;
         setup_data.length = setup_stage_trb->bits.length;
-
+        
         if (issuer_trb->bits.trb_type == 3) {  //  DataStageTRB
-            // logger->debug("DATA STAGE TRB!!\n");
             DataStageTRB *data_stage_trb = reinterpret_cast<DataStageTRB *>(issuer_trb);
             buf = reinterpret_cast<void *>(data_stage_trb->bits.data_buffer_pointer);
             length = data_stage_trb->bits.trb_transfer_length - residual_length;    //  実際のバッファの大きさ。

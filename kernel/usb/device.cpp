@@ -1,7 +1,9 @@
+#include <cstring>
 #include "device.hpp"
 #include "../logging.hpp"
 extern logging::Logger *logger;
 int printk(const char *format, ...);
+void Halt();
   
 namespace
 {
@@ -86,6 +88,8 @@ namespace usb
 
         ConfigurationDescriptorReader config_reader((uint8_t *) config_desc, len);
         num_ep_configs_ = 0;
+        ClassDriver *class_driver = nullptr;
+        memset(ep_to_class_driver_map, 0, sizeof(ClassDriver *) * 16);
         while (config_reader.Next())
         {
             uint8_t desc_type = config_reader.DescriptorType();
@@ -108,11 +112,13 @@ namespace usb
                 // logger->debug("Class Number: %06x\n", class_number);
                 // クラスドライバーの選択
                 if (class_number == 0x030101) { // HID BOOT INTERFACE (KEYBOARD)
-                    class_drivers_[interface_desc->interface_number] = new HIDKeyboardDriver(this, interface_desc->interface_number);
-                } 
-                /* else if (class_number == 0x030102) { // HID BOOT INTERFACE (MOUSE)
-                    class_drivers_[interface_desc->interface_number] = new HIDClassDriver(this, interface_desc->interface_number);
-                } */
+                    class_driver = new HIDKeyboardDriver(this, interface_desc->interface_number);
+                } /* else if (class_number == 0x030102) { // HID BOOT INTERFACE (MOUSE)
+                    class_driver = new HIDClassDriver(this, interface_desc->interface_number);
+                } */ else { // サポート対象外のデバイス
+                    class_driver = nullptr;
+                }
+                class_drivers_[interface_desc->interface_number] = class_driver;
             } else if (desc_type == descriptor_type::kEndpoint) {
                 EndpointDescriptor *ep_desc = (EndpointDescriptor *) config_reader.Addr();
                 logger->debug("    | [ENDPOINT]\n");
@@ -128,6 +134,8 @@ namespace usb
                 conf.interval = ep_desc->interval;
                 ep_configs_[num_ep_configs_] = conf;
                 num_ep_configs_++;
+                
+                ep_to_class_driver_map[ep_desc->endpoint_address.bits.number] = class_driver;
                 
             } else if (desc_type == descriptor_type::kHID) {
                 HIDDescriptorReader hid_desc_reader((HIDDescriptorHeader *) config_reader.Addr());
@@ -149,6 +157,9 @@ namespace usb
             }
 
         }
+        for (int i = 0; i < 16; i++) {
+            printk("class driver: %p\n", ep_to_class_driver_map[i]);
+        }
 
         initialize_phase_ = 3;
         return SetConfiguration(kDefaultControlPipeID, config_desc->configuration_value);
@@ -165,23 +176,16 @@ namespace usb
   
     int Device::OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len)
     {
-        // logger->debug("[Device::OnControlCompleted] buf: %p, len: %d\n", buf, len);
+        logger->debug("[Device::OnControlCompleted] buf: %p, len: %d\n", buf, len);
         if (is_initialized_) { // 初期化が完了している時
         /* 
         
         めちゃくちゃ適当！！！
         
          */
-
             if (setup_data.request_type.bits.type == request_type::kClass && class_drivers_[setup_data.index]) {
                 class_drivers_[setup_data.index]->OnControlCompleted(ep_id, setup_data, buf, len);
             }
-            
-            /* if (auto class_driver = event_waiters_.Get(&setup_data)) {
-                event_waiters_.Delete(&setup_data);
-                return class_driver->OnControlCompleted(ep_id, setup_data, buf, len);
-            }
-            printk("[Error] There are no event waiter\n"); */
             return 0;
         }
 
@@ -207,7 +211,12 @@ namespace usb
         /* 
         エンドポイントの番号から対象のクラスドライバを選択し、クラスドライバのOnInterruptCompletedを呼び出す
          */
-        printk("OnInterruptCompleted!!\n");
+        printk("jsdhfjkashdjkfhaklsh");
+        if (ep_to_class_driver_map[ep_id.EndpointNumber()]) {
+            ep_to_class_driver_map[ep_id.EndpointNumber()]->OnInterruptCompleted(ep_id, buf, len);
+        } else {
+            logger->error("There Are No Class Driver On Endpoint%d\n", ep_id.EndpointNumber());
+        }
         return -1;
     }
 

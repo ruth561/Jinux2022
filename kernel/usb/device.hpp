@@ -63,6 +63,9 @@ namespace usb
 
         // class_driver_[interface_number] := インターフェースに対応したクラスドライバへのポインタ
         ClassDriver *class_drivers_[256] = {};
+        // Endpointの番号からそこで動いているクラスドライバへのポインタをmapする配列
+        // ep_to_class_driver_map[i] := Endpoint(i)上で動くクラスドライバへのポインタ
+        ClassDriver *ep_to_class_driver_map[16] = {};
 
         //  i番目のエンドポイントの設定情報を格納する配列。
         //  ここで管理されるエンドポイントは、このOSが対応しているインターフェースの
