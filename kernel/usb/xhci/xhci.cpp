@@ -370,7 +370,6 @@ namespace usb::xhci
         // logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
         // logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
         // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        
         if (issuer_type == EnableSlotCommandTRB::Type) {
             PortAt(port_id).SetSlot(slot_id);
             if (initializing_port[port_id]) {
@@ -544,16 +543,11 @@ namespace usb::xhci
             return -1;
         }
         // logger->info("[+] ENABLE SLOT FOR PORT%02hhd\n", port->Number());
-        if (port_config_phase[port->Number()] != ConfigPhase::kResettingPort) {
-            return -1;
-        }
 
-        port->ClearPortResetChange(); // これいらなくない？
-        port_config_phase[port->Number()] = ConfigPhase::kEnablingSlot;
+        port->ClearPortResetChange();
 
         EnableSlotCommandTRB command_trb = EnableSlotCommandTRB{};
         cr_.Push(&command_trb);
-
         RingCommandRing();
         return 0;
     }
@@ -680,11 +674,18 @@ namespace usb::xhci
         }
     }
 
-    void WaitEventInInitializeFase(uint8_t port_num)
+    // 初期化中にイベントを待つ
+    void WaitEvent(uint8_t port_num)
     {
         Task *current_task = task_manager->CurrentTask();
         initializing_port[port_num] = current_task->ID();
         current_task->Sleep();
+    }
+
+    // 初期化中に失敗したら永久スリープ
+    void ErrorOnInit() {
+        task_manager->CurrentTask()->Sleep();
+        Halt();
     }
 
 // 初期化時に使用される関数
@@ -694,15 +695,18 @@ namespace usb::xhci
         Port port = xhc->PortAt(port_num);
 
         printk("[TASK %ld] PORT%d WILL BE INITIALIZED.\n", id, port_num);
-        xhc->ResetPort(&port);
+        if (xhc->ResetPort(&port)) {
+            ErrorOnInit();
+        }
 
-        WaitEventInInitializeFase(port_num);
+        WaitEvent(port_num);
 
         printk("PORT%d RESET COMPLETED.\n", port_num);
-        port.ClearPortResetChange();
-        xhc->EnableSlot(&port);
+        if (xhc->EnableSlot(&port)) {
+            ErrorOnInit();
+        }
 
-        WaitEventInInitializeFase(port_num);
+        WaitEvent(port_num);
 
         printk("PORT%d RESET COMPLETED.\n", port_num);
         uint8_t slot_num = port.Slot();
