@@ -372,14 +372,11 @@ namespace usb::xhci
         // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
         
         if (issuer_type == EnableSlotCommandTRB::Type) {
-            if (port_config_phase[addressing_port] != ConfigPhase::kEnablingSlot) {
-                // 現在処理中のポートの状態がkEnablingSlotでない場合はエラーを吐く。
-                // イベントを受け取る時は、この状態でなければならないことを示している。 
-                return -1;
+            PortAt(port_id).SetSlot(slot_id);
+            if (initializing_port[port_id]) {
+                task_manager->Wakeup(initializing_port[port_id]);
+                return 0;
             }
-            logger->info("[+] Slot%02hhd Enabled For Port%02hhd\n", slot_id, addressing_port);
-            slot_to_port_[slot_id] = addressing_port;
-            return AddressDevice(addressing_port, slot_id);
         } else if (issuer_type == AddressDeviceCommandTRB::Type) {
             // このコマンドが正常に完了した場合、インプットスロットの内容は、
             // 全てアウトプットスロットの内容にコピーされているはずである。
@@ -477,11 +474,7 @@ namespace usb::xhci
                 task_manager->Wakeup(initializing_port[port_id]);
                 return 0;
             }
-            logger->info("[+] Port Reset Completed.\n");
-            if (port_config_phase[port_id] == ConfigPhase::kResettingPort) {
-                res = EnableSlot(&port);
-            }
-            port.ClearPortResetChange();
+            return -1;
         }
 
         return res;
@@ -706,6 +699,16 @@ namespace usb::xhci
         WaitEventInInitializeFase(port_num);
 
         printk("PORT%d RESET COMPLETED.\n", port_num);
+        port.ClearPortResetChange();
+        xhc->EnableSlot(&port);
+
+        WaitEventInInitializeFase(port_num);
+
+        printk("PORT%d RESET COMPLETED.\n", port_num);
+        uint8_t slot_num = port.Slot();
+        logger->info("[+] SLOT%d ENABLED FOR PORT%d\n", slot_num, addressing_port);
+        xhc->slot_to_port_[slot_num] = port_num;
+        xhc->AddressDevice(port_num, slot_num);
 
         Halt();
     }

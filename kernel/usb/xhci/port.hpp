@@ -29,6 +29,13 @@ namespace usb::xhci
         Port(uint8_t port_num, PortRegisterSet *port_reg_set);
 
         uint8_t Number();
+        uint8_t Slot() {
+            return slot_num_;
+        }
+        void SetSlot(uint8_t slot_num) {
+            slot_num_ = slot_num;
+        }
+
         uint32_t Speed();
         //  PORTSCのCCSの値を返す。
         //  つまり、このポートが接続状態ならtrueを、そうでないならfalseを返す。
@@ -56,6 +63,7 @@ namespace usb::xhci
 
     private:
         const uint8_t port_num_; // Portの番号
+        uint8_t slot_num_; // Portに対応したスロット番号
         PortRegisterSet *port_reg_set_; // ポート関連のレジスタ群
     };
 }
