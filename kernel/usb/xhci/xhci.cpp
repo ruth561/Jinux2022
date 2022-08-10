@@ -106,6 +106,11 @@ namespace usb::xhci
         logger->debug("HCSPARAMS1: %08xH\n", cap_->HCSPARAMS1.data[0]);
         logger->debug("HCSPARAMS2: %08xH\n", cap_->HCSPARAMS2.data[0]);
         logger->debug("HCSPARAMS3: %08xH\n", cap_->HCSPARAMS3.data[0]);
+
+        for (int i = 1; i < 256; i++) {
+            ports_[i] = new Port(i, reinterpret_cast<PortRegisterSet *>(
+                reinterpret_cast<uint64_t>(opt_) + 0x400 + 0x10 * (i - 1)));
+        }
     }
 
     int Controller::Initializer()
@@ -184,7 +189,7 @@ namespace usb::xhci
         //  各ポートのレジスタの値を解析し、USBデバイスが接続されている
         //  ポートにリセット処理を介しするように促す。
         for (uint8_t port_num = MaxPorts(); port_num > 0; port_num--) {
-            Port port = PortAt(port_num);
+            Port *port = PortAt(port_num);
             // printk("Port %02d: IsConnected=%d IsEnabled=%d IsConnectStatusChanged=%d\n", 
             //    port.Number(), 
             //    port.IsConnected(),
@@ -192,13 +197,13 @@ namespace usb::xhci
             //    port.IsConnectStatusChanged());
 
             //  各ステータスフラグのクリアを行う。
-            if (port.IsConnectStatusChanged()) 
-                port.ClearConnectStatusChanged();
-            if (port.IsPortResetChanged())  
-                port.ClearPortResetChange();
+            if (port->IsConnectStatusChanged()) 
+                port->ClearConnectStatusChanged();
+            if (port->IsPortResetChanged())  
+                port->ClearPortResetChange();
 
             //  デバイスが接続されているポートをリセットする。
-            if (port.IsConnected()) {
+            if (port->IsConnected()) {
                 task_manager
                     ->NewTask()
                     ->InitContext(InitUSBDeviceTask, static_cast<int64_t>(port_num))
@@ -228,10 +233,9 @@ namespace usb::xhci
         return static_cast<uint8_t>(cap_->HCSPARAMS1.bits.max_ports); 
     }
 
-    Port Controller::PortAt(uint8_t port_num) 
+    Port *Controller::PortAt(uint8_t port_num) 
     {
-        return Port(port_num, reinterpret_cast<PortRegisterSet *>(
-            reinterpret_cast<uint64_t>(opt_) + 0x400 + 0x10 * (port_num - 1)));
+        return ports_[port_num];
     }
 
     void Controller::SendNoOpCommand()
@@ -290,7 +294,7 @@ namespace usb::xhci
 
         // ポートスピードの値からMaxPacketSizeを設定する
         const uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
-        const int port_speed = PortAt(port_id).Speed();
+        const int port_speed = PortAt(port_id)->Speed();
         if (port_speed == 0 || port_speed > PortSpeed::kSuperSpeed) {
             logger->error("[ConfigEndpoint] Port Speed Unsupported\n");
             return -1;
@@ -366,12 +370,14 @@ namespace usb::xhci
         uint32_t slot_id = trb->bits.slot_id;
         TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ
         uint32_t issuer_type = issuer_trb->bits.trb_type;
-        // logger->debug("[OnEvent] CommandCompletionEvent\n");
-        // logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
-        // logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
-        // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        logger->set_level(logging::kDEBUG);
+        logger->debug("[OnEvent] CommandCompletionEvent\n");
+        logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
+        logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
+        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
         if (issuer_type == EnableSlotCommandTRB::Type) {
-            PortAt(port_id).SetSlot(slot_id);
+            port_id = addressing_port; // EnableSlotを実行しているのはひとつだけ
+            PortAt(port_id)->SetSlot(slot_id);
             if (initializing_port[port_id]) {
                 task_manager->Wakeup(initializing_port[port_id]);
                 return 0;
@@ -394,8 +400,8 @@ namespace usb::xhci
             addressing_port = 0;
             for (uint8_t i = MaxPorts(); i > 0; i--) {
                 if (port_config_phase[i] == ConfigPhase::kWaitingAddressed) {
-                    Port port = PortAt(i);
-                    res = ResetPort(&port);
+                    Port *port = PortAt(i);
+                    res = ResetPort(port);
                     if (res == -1) {
                         logger->error("Failed To Reset Port%02hhd\n", i);
                         continue;
@@ -445,30 +451,30 @@ namespace usb::xhci
          */
         int res = -1;
         uint8_t port_id = static_cast<uint8_t>(trb->bits.port_id);
-        Port port = PortAt(port_id);
+        Port *port = PortAt(port_id);
         // logger->debug("[OnEvent] PortStatusChangeEvent\n");
         // logger->debug("    | PortNumber: %hhd\n", port.Number());
         // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
         
-        if (port.IsConnectStatusChanged()) { // ポート接続の変化
-            if (port.IsConnected()) {
-                logger->info("[+] Device Attached To Port%hhd.\n", port.Number());
+        if (port->IsConnectStatusChanged()) { // ポート接続の変化
+            if (port->IsConnected()) {
+                logger->info("[+] Device Attached To Port%hhd.\n", port->Number());
                 if (port_config_phase[port_id] == ConfigPhase::kNotConnected) // 接続検知
-                    res = ResetPort(&port);
+                    res = ResetPort(port);
             } else {
-                logger->info("[+] Device Detached From Port%hhd\n", port.Number());
-                port_config_phase[port.Number()] = ConfigPhase::kNotConnected;
+                logger->info("[+] Device Detached From Port%hhd\n", port->Number());
+                port_config_phase[port->Number()] = ConfigPhase::kNotConnected;
                 // ポートにスロットが割り当てられていれば、そのスロットを無効にする
                 for (int i = 1; i <= device_size_; i++) {
-                    if (slot_to_port_[i] == port.Number()) {
+                    if (slot_to_port_[i] == port->Number()) {
                         DisableSlot(i);
                         break;
                     }
                 }
             }
-            port.ClearConnectStatusChanged();
+            port->ClearConnectStatusChanged();
         }
-        if (port.IsPortResetChanged()) { // リセット処理が終わった場合
+        if (port->IsPortResetChanged()) { // リセット処理が終わった場合
             if (initializing_port[port_id]) {
                 task_manager->Wakeup(initializing_port[port_id]);
                 return 0;
@@ -572,7 +578,7 @@ namespace usb::xhci
             printk("[DEBUG CTRer::AddressDev] FAILED!! AllocDevice\n");
             return -1;
         }
-        if (addressing_port != PortAt(port_id).Number()) {
+        if (addressing_port != PortAt(port_id)->Number()) {
             logger->error("This Port Is Not Addressing Port\n");
             return -1;
         }
@@ -584,11 +590,11 @@ namespace usb::xhci
         EndpointContext *ep0_ctx = device->InputContextPtr()->EnableEndpoint(DeviceContextIndex{1});
 
         //  3. InputSlotContextを初期化。
-        Port port = PortAt(addressing_port);
-        slot_ctx->bits.root_hub_port_num = port.Number();
+        Port *port = PortAt(addressing_port);
+        slot_ctx->bits.root_hub_port_num = port->Number();
         slot_ctx->bits.route_string = 0;
         slot_ctx->bits.context_entries = 1;
-        slot_ctx->bits.speed = port.Speed();     //  ここよく分かってない。
+        slot_ctx->bits.speed = port->Speed();     //  ここよく分かってない。
 
         //  4. EP０の初期化。
         ep0_ctx->bits.ep_type = 4;
@@ -692,25 +698,24 @@ namespace usb::xhci
     void InitUSBDeviceTask(uint64_t id, int64_t port_num_)
     {
         uint8_t port_num = static_cast<uint8_t>(port_num_);
-        Port port = xhc->PortAt(port_num);
+        Port *port = xhc->PortAt(port_num);
 
         printk("[TASK %ld] PORT%d WILL BE INITIALIZED.\n", id, port_num);
-        if (xhc->ResetPort(&port)) {
+        if (xhc->ResetPort(port)) {
             ErrorOnInit();
         }
 
         WaitEvent(port_num);
 
         printk("PORT%d RESET COMPLETED.\n", port_num);
-        if (xhc->EnableSlot(&port)) {
+        if (xhc->EnableSlot(port)) {
             ErrorOnInit();
         }
 
         WaitEvent(port_num);
 
-        printk("PORT%d RESET COMPLETED.\n", port_num);
-        uint8_t slot_num = port.Slot();
-        logger->info("[+] SLOT%d ENABLED FOR PORT%d\n", slot_num, addressing_port);
+        uint8_t slot_num = port->Slot();
+        printk("[+] SLOT%d ENABLED FOR PORT%d\n", slot_num, addressing_port);
         xhc->slot_to_port_[slot_num] = port_num;
         xhc->AddressDevice(port_num, slot_num);
 

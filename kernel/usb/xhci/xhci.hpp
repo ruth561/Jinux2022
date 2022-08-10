@@ -32,7 +32,7 @@ namespace usb::xhci
 
         uint8_t MaxPorts() const; // コントローラーの持つルートポートの数
 
-        Port PortAt(uint8_t port_num); // １ ≦ port_num ≦ MaxPorts()
+        Port *PortAt(uint8_t port_num); // １ ≦ port_num ≦ MaxPorts()
 
         void SendNoOpCommand(); //  コントローラーにNoOpCommandTRBを送りドアベルを鳴らす
 
@@ -56,6 +56,7 @@ namespace usb::xhci
         RuntimeRegisters* const run_;
         DoorbellRegister* const doorbell_; // doorbell_[i].Ring()でi番目のドアベルを鳴らす
         class DeviceManager devmgr_; // デバイスの管理オブジェクト
+        Port *ports_[256];
 
         Ring cr_; // コマンドリング
         EventRing er_; // イベントリング
