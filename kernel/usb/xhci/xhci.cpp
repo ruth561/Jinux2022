@@ -178,11 +178,11 @@ namespace usb::xhci
         //  ポートにリセット処理を介しするように促す。
         for (uint8_t port_num = MaxPorts(); port_num > 0; port_num--) {
             Port port = PortAt(port_num);
-            printk("Port %02d: IsConnected=%d IsEnabled=%d IsConnectStatusChanged=%d\n", 
-                port.Number(), 
-                port.IsConnected(),
-                port.IsEnabled(), 
-                port.IsConnectStatusChanged());
+            // printk("Port %02d: IsConnected=%d IsEnabled=%d IsConnectStatusChanged=%d\n", 
+            //    port.Number(), 
+            //    port.IsConnected(),
+            //    port.IsEnabled(), 
+            //    port.IsConnectStatusChanged());
 
             //  各ステータスフラグのクリアを行う。
             if (port.IsConnectStatusChanged()) 
@@ -262,12 +262,12 @@ namespace usb::xhci
         // USBデバイスの初期化が終わり、Configuration Descriptorの情報などがDeviceオブジェクトに保存されている状態を前提とする。
         EndpointConfig *configs = dev->EndpointConfigs();
         int len = dev->NumEndpointConfig();
-        logger->info("[+] ConfigureEndpoints\n");
+        // logger->debug("[+] ConfigureEndpoints\n");
         for (int i = 0; i < len; i++) {
-            logger->info("    | DeviceContextIndex: %d\n", configs[i].ep_id.DeviceContextID());
-            logger->info("    | EndPointType: %s\n", usb::kEndpointTypeToName[configs[i].ep_type]);
-            logger->info("    | MaxPacketSize: %d\n", configs[i].max_packet_size);
-            logger->info("    | Interval: %d\n", configs[i].interval);
+            // logger->debug("    | DeviceContextIndex: %d\n", configs[i].ep_id.DeviceContextID());
+            // logger->debug("    | EndPointType: %s\n", usb::kEndpointTypeToName[configs[i].ep_type]);
+            // logger->debug("    | MaxPacketSize: %d\n", configs[i].max_packet_size);
+            // logger->debug("    | Interval: %d\n", configs[i].interval);
         }
 
         memset(&dev->InputContextPtr()->input_control_context, 0, sizeof(InputControlContext)); //  InputControlContextのデータを０クリアする。
@@ -283,7 +283,7 @@ namespace usb::xhci
             logger->error("[ConfigEndpoint] Port Speed Unsupported\n");
             return -1;
         }
-        logger->debug("    | PortSpeed: %d\n", port_speed);
+        // logger->debug("    | PortSpeed: %d\n", port_speed);
 
         for (int i = 0; i < len; i++) { // 全てのエンドポイントに対して設定を行ってゆく
             auto ep_ctx = dev->InputContextPtr()->EnableEndpoint(DeviceContextIndex{configs[i].ep_id.DeviceContextID()});
@@ -354,10 +354,10 @@ namespace usb::xhci
         uint32_t slot_id = trb->bits.slot_id;
         TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ
         uint32_t issuer_type = issuer_trb->bits.trb_type;
-        logger->debug("[OnEvent] CommandCompletionEvent\n");
-        logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
-        logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
-        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        // logger->debug("[OnEvent] CommandCompletionEvent\n");
+        // logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
+        // logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
+        // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
         
         if (issuer_type == EnableSlotCommandTRB::Type) {
             if (port_config_phase[addressing_port] != ConfigPhase::kEnablingSlot) {
@@ -365,7 +365,7 @@ namespace usb::xhci
                 // イベントを受け取る時は、この状態でなければならないことを示している。 
                 return -1;
             }
-            logger->info("[+] SLOT%02hhd ENABLED FOR PORT%02hhd\n", slot_id, addressing_port);
+            logger->info("[+] Slot%02hhd Enabled For Port%02hhd\n", slot_id, addressing_port);
             slot_to_port_[slot_id] = addressing_port;
             return AddressDevice(addressing_port, slot_id);
         } else if (issuer_type == AddressDeviceCommandTRB::Type) {
@@ -379,7 +379,7 @@ namespace usb::xhci
             if (port_config_phase[port_id] != ConfigPhase::kAddressingDevice) return -1;
  
             if (dev->DeviceContextPtr()->endpoint_context[0].bits.ep_state) {
-                logger->info("[+] EndPoint0 Is Running.\n");
+                logger->info("[+] Endpoint0 Is Running.\n");
             }
             
             // アドレス割当が完了したので、アドレス処理待ちの他のポートの割当を行う。
@@ -404,7 +404,7 @@ namespace usb::xhci
             dev->StartInitialize();
         } else if (issuer_type == DisableSlotCommandTRB::Type) {
             if (trb->bits.completion_code == 1) {
-                logger->info("[+] SLOT%02d DISABLED.\n", slot_id);
+                logger->info("[+] Slot%02d Disabled.\n", slot_id);
                 slot_to_port_[slot_id] = 0;
                 devmgr_.DisableSlot(slot_id); // デバイス用に確保したメモリ領域を確保などする
             }
@@ -420,7 +420,7 @@ namespace usb::xhci
                 return -1;
             }
             logger->info("[+] Completed Configure Endpoint!\n");
-            logger->info("DeviceContextPtr(): %p\n", dev->DeviceContextPtr());
+            // logger->info("DeviceContextPtr(): %p\n", dev->DeviceContextPtr());
             return CompleteConfiguration(port_id, slot_id);
         }
 
@@ -438,17 +438,17 @@ namespace usb::xhci
         int res = -1;
         uint8_t port_id = static_cast<uint8_t>(trb->bits.port_id);
         Port port = PortAt(port_id);
-        logger->debug("[OnEvent] PortStatusChangeEvent\n");
-        logger->debug("    | PortNumber: %hhd\n", port.Number());
-        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        // logger->debug("[OnEvent] PortStatusChangeEvent\n");
+        // logger->debug("    | PortNumber: %hhd\n", port.Number());
+        // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
         
         if (port.IsConnectStatusChanged()) { // ポート接続の変化
             if (port.IsConnected()) {
-                logger->info("[+] DEVICE ATTACHED TO PORT%hhd!!\n", port.Number());
+                logger->info("[+] Device Attached To Port%hhd.\n", port.Number());
                 if (port_config_phase[port_id] == ConfigPhase::kNotConnected) // 接続検知
                     res = ResetPort(&port);
             } else {
-                logger->info("[+] DEVICE DETACHED FROM PORT%hhd\n", port.Number());
+                logger->info("[+] Device Detached From Port%hhd\n", port.Number());
                 port_config_phase[port.Number()] = ConfigPhase::kNotConnected;
                 // ポートにスロットが割り当てられていれば、そのスロットを無効にする
                 for (int i = 1; i <= device_size_; i++) {
@@ -461,7 +461,7 @@ namespace usb::xhci
             port.ClearConnectStatusChanged();
         }
         if (port.IsPortResetChanged()) { // リセット処理が終わった場合
-            logger->info("[+] PORT RESET COMPLETED!!\n");
+            logger->info("[+] Port Reset Completed.\n");
             if (port_config_phase[port_id] == ConfigPhase::kResettingPort) {
                 res = EnableSlot(&port);
             }
@@ -473,15 +473,15 @@ namespace usb::xhci
 
     int Controller::OnEvent(TransferEventTRB *trb)
     {
-        TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
-        logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
-        logger->set_level(logging::kINFO);
-        logger->debug("[OnEvent] TransferEvent\n");
-        logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
-        logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
-        logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
-        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        logger->set_level(current_level);
+        // TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
+        // logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
+        // logger->set_level(logging::kINFO);
+        // logger->debug("[OnEvent] TransferEvent\n");
+        // logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
+        // logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
+        // logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
+        // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        // logger->set_level(current_level);
 
         uint8_t slot_id = trb->bits.slot_id;
         Device *dev = devmgr_.FindBySlot(slot_id); // デバイスの特定を行う
@@ -534,7 +534,7 @@ namespace usb::xhci
             logger->error("This Port Is Not Addressing Port\n");
             return -1;
         }
-        logger->info("[+] ENABLE SLOT FOR PORT%02hhd\n", port->Number());
+        // logger->info("[+] ENABLE SLOT FOR PORT%02hhd\n", port->Number());
         if (port_config_phase[port->Number()] != ConfigPhase::kResettingPort) {
             return -1;
         }
@@ -551,7 +551,7 @@ namespace usb::xhci
 
     int Controller::DisableSlot(uint8_t slot_id)
     {
-        logger->info("[+] DISABLE SLOT%02hhd\n", slot_id);
+        // logger->info("[+] DISABLE SLOT%02hhd\n", slot_id);
         DisableSlotCommandTRB command_trb(slot_id);
         
         cr_.Push(&command_trb);
@@ -562,7 +562,7 @@ namespace usb::xhci
     int Controller::AddressDevice(uint8_t port_id, uint8_t slot_id)
     {
         int res;
-        logger->debug("[+] ADRESS DEVICE (PORT%02hhd, SLOT%02hhd)\n", port_id, slot_id);
+        // logger->debug("[+] ADRESS DEVICE (PORT%02hhd, SLOT%02hhd)\n", port_id, slot_id);
 
         res = devmgr_.AllocDevice(slot_id, &doorbell_[slot_id]);
         if (res == -1) {

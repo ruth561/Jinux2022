@@ -83,8 +83,8 @@ BitmapMemoryManager* memory_manager;
 
 void InitializeMemoryManager(MemoryMap& memory_map)
 {
-    logging::LoggingLevel log_level = logger->current_level();
-    logger->set_level(logging::kINFO);
+    // logging::LoggingLevel log_level = logger->current_level();
+    // logger->set_level(logging::kINFO);
     logger->info("[+] Initialize Memory Manager\n");
 
     memory_manager = new(memory_manager_buf) BitmapMemoryManager; 
@@ -116,7 +116,7 @@ void InitializeMemoryManager(MemoryMap& memory_map)
         logger->error("Failed to allocate heap memory...\n");
         Halt();
     }
-    logger->set_level(log_level);
+    // logger->set_level(log_level);
 }
 
 extern "C" caddr_t program_break, program_break_end;

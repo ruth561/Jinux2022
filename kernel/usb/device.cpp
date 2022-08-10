@@ -157,9 +157,6 @@ namespace usb
             }
 
         }
-        for (int i = 0; i < 16; i++) {
-            printk("class driver: %p\n", ep_to_class_driver_map[i]);
-        }
 
         initialize_phase_ = 3;
         return SetConfiguration(kDefaultControlPipeID, config_desc->configuration_value);
@@ -167,7 +164,7 @@ namespace usb
 
     int Device::InitializePhase3(uint8_t config_value)
     {
-        logger->info("[+] SET CONFIGURATION %d!!\n", config_value);
+        logger->info("[+] Set Configuration %d.\n", config_value);
         initialize_phase_ = 4;
         is_initialized_ = true;
         logger->info("[+] Device Configured.\n");
@@ -176,7 +173,7 @@ namespace usb
   
     int Device::OnControlCompleted(EndpointID ep_id, SetupData setup_data, void *buf, int len)
     {
-        logger->debug("[Device::OnControlCompleted] buf: %p, len: %d\n", buf, len);
+        // logger->debug("[Device::OnControlCompleted] buf: %p, len: %d\n", buf, len);
         if (is_initialized_) { // 初期化が完了している時
         /* 
         
@@ -211,7 +208,6 @@ namespace usb
         /* 
         エンドポイントの番号から対象のクラスドライバを選択し、クラスドライバのOnInterruptCompletedを呼び出す
          */
-        printk("jsdhfjkashdjkfhaklsh");
         if (ep_to_class_driver_map[ep_id.EndpointNumber()]) {
             ep_to_class_driver_map[ep_id.EndpointNumber()]->OnInterruptCompleted(ep_id, buf, len);
         } else {

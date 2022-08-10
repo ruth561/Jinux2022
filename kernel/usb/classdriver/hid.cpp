@@ -119,8 +119,8 @@ namespace usb
         // logger->debug("Received Data From HID Device!!\n");
         uint8_t *data;
         data = reinterpret_cast<uint8_t *>(buf);
-        logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
-            data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+        /* logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
+            data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]); */
         
         ModifierKey modifier_key{data[0]};
         char key[2] = {0, 0};

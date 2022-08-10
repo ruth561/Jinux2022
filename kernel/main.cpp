@@ -50,8 +50,9 @@ extern "C" void KernelMainNewStack(
     
     InitializeGrapfics(frame_buffer_config);
     InitializeConsole(); // コンソールの初期化
+    printk("Hello, JINUX!\n\n");
     logger = new(logger_buf) logging::Logger();
-    logger->set_level(logging::kDEBUG); // ログレベルの変更・設定
+    logger->set_level(logging::kERROR); // ログレベルの変更・設定
 
     SetupSegments(); // UEFIの設定を更新し直す
     SetupIdentityPageTable(); // ページングの設定
@@ -66,7 +67,7 @@ extern "C" void KernelMainNewStack(
 
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
-    logger->set_level(logging::kDEBUG); // 出力減らす
+    logger->set_level(logging::kERROR); // 出力減らす
 
     usb::xhci::Initialize(); // xHCの初期化 
 
