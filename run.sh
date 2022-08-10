@@ -39,3 +39,9 @@ devenv/run_qemu.sh ~/edk2/Build/Jinux2022LoaderX64/DEBUG_CLANG38/X64/Loader.efi 
 #
 # sudo umount mnt
 #
+
+
+#
+# gdbデバッグは以下のようなコマンドを実行する
+# gdb -q -nx -x gdb_init 
+#
