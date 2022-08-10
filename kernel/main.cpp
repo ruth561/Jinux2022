@@ -117,7 +117,7 @@ extern "C" void KernelMainNewStack(
 
 void Halt(void)
 {
-    while (1) __asm__("cli\n\thlt");
+    while (1) __asm__("hlt");
 }
 
 int printk(const char *format, ...) {

@@ -23,6 +23,7 @@ qemu-system-x86_64 \
     -device nec-usb-xhci,id=xhci \
     -device usb-mouse -device usb-kbd \
     -monitor stdio -gdb tcp::1234 \
+    -S \
     $QEMU_OPTS
 
 # -S: 実行前に止まってくれる引数

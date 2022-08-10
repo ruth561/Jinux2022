@@ -51,4 +51,7 @@ usb/xhci/xhci.o: usb/xhci/xhci.cpp usb/xhci/xhci.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
+  usb/xhci/../../task.hpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/deque \
+  usb/xhci/../../message.hpp

@@ -7,6 +7,7 @@
 #include "port.hpp"
 #include "../../pci.hpp"
 #include "../../logging.hpp"
+#include "../../task.hpp"
 
 
 
@@ -45,7 +46,7 @@ namespace usb::xhci
         //  使用するエンドポイントが列挙されている。
         int ConfigureEndpoints(Device *dev);
     
-    private:
+    // private:
         uint8_t device_size_; // デバイススロットの有効化数 
         std::vector<uint8_t> slot_to_port_;
 
@@ -99,5 +100,8 @@ namespace usb::xhci
     // Event Ringに溜まっているものを処理する
     void ProcessEvents();
 
+    // USBデバイスの初期化を行う
+    // Portにデバイスが接続されていることを確認後タスクとして実行される
+    void InitUSBDeviceTask(uint64_t id, int64_t port);
 
 }

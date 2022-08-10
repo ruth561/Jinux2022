@@ -3,6 +3,8 @@
 int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
+extern TaskManager* task_manager;
+
 
 namespace pci 
 {
@@ -60,6 +62,10 @@ namespace
     //  ポートは最大でも２５６個なので、この大きさで確保してある。
     ConfigPhase port_config_phase[256] = {};
 
+    // ０なら初期化中でない
+    // ０でないならUSBデバイスを初期化中のタスクIDである
+    uint64_t initializing_port[256] = {};
+
     //  現在リセットからアドレスの割当までの処理を行っているポートの番号。
     //  どのポートもその処理上にない場合、この値は０を示す。
     uint8_t addressing_port = 0;
@@ -76,6 +82,7 @@ namespace
                 return 8;
         }
     }
+
 } // namespace
 
 
@@ -192,7 +199,12 @@ namespace usb::xhci
 
             //  デバイスが接続されているポートをリセットする。
             if (port.IsConnected()) {
-                ResetPort(&port);
+                task_manager
+                    ->NewTask()
+                    ->InitContext(InitUSBDeviceTask, static_cast<int64_t>(port_num))
+                    ->Wakeup(3); // カーネルの特権レベルで実行
+                // Halt(); // 一旦停止しておく
+                // ResetPort(&port);
             }
         }
     }
@@ -461,6 +473,10 @@ namespace usb::xhci
             port.ClearConnectStatusChanged();
         }
         if (port.IsPortResetChanged()) { // リセット処理が終わった場合
+            if (initializing_port[port_id]) {
+                task_manager->Wakeup(initializing_port[port_id]);
+                return 0;
+            }
             logger->info("[+] Port Reset Completed.\n");
             if (port_config_phase[port_id] == ConfigPhase::kResettingPort) {
                 res = EnableSlot(&port);
@@ -671,4 +687,26 @@ namespace usb::xhci
         }
     }
 
+    void WaitEventInInitializeFase(uint8_t port_num)
+    {
+        Task *current_task = task_manager->CurrentTask();
+        initializing_port[port_num] = current_task->ID();
+        current_task->Sleep();
+    }
+
+// 初期化時に使用される関数
+    void InitUSBDeviceTask(uint64_t id, int64_t port_num_)
+    {
+        uint8_t port_num = static_cast<uint8_t>(port_num_);
+        Port port = xhc->PortAt(port_num);
+
+        printk("[TASK %ld] PORT%d WILL BE INITIALIZED.\n", id, port_num);
+        xhc->ResetPort(&port);
+
+        WaitEventInInitializeFase(port_num);
+
+        printk("PORT%d RESET COMPLETED.\n", port_num);
+
+        Halt();
+    }
 }

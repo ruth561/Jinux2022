@@ -60,4 +60,5 @@ main.o: main.cpp \
   usb/xhci/../classdriver/../endpoint.hpp \
   usb/xhci/../classdriver/../setupdata.hpp \
   usb/xhci/../classdriver/hid.hpp usb/xhci/../classdriver/../device.hpp \
-  usb/xhci/../../logging.hpp usb/xhci/port.hpp usb/xhci/../../pci.hpp
+  usb/xhci/../../logging.hpp usb/xhci/port.hpp usb/xhci/../../pci.hpp \
+  usb/xhci/../../task.hpp

@@ -1,5 +1,5 @@
 #pragma once
-
+#include <stdint.h>
 
 // カーネルのmain内で処理される割り込み一つあたりのデータ。
 struct Message
@@ -12,9 +12,13 @@ struct Message
 
     union {
         struct {
-            unsigned long timeout;
+            uint64_t timeout;
             int value;
         } timer;
+        struct {
+            uint64_t port_num;
+            int value;
+        } xhc_port_init;
     } arg;
 };
 
