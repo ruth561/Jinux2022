@@ -56,7 +56,7 @@ namespace usb::xhci
         RuntimeRegisters* const run_;
         DoorbellRegister* const doorbell_; // doorbell_[i].Ring()でi番目のドアベルを鳴らす
         class DeviceManager devmgr_; // デバイスの管理オブジェクト
-        Port *ports_[256];
+        std::array<Port *, 256> ports_;
 
         Ring cr_; // コマンドリング
         EventRing er_; // イベントリング
