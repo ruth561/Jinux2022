@@ -278,13 +278,13 @@ namespace usb::xhci
         // USBデバイスの初期化が終わり、Configuration Descriptorの情報などがDeviceオブジェクトに保存されている状態を前提とする。
         EndpointConfig *configs = dev->EndpointConfigs();
         int len = dev->NumEndpointConfig();
-        // logger->debug("[+] ConfigureEndpoints\n");
+        /* // logger->debug("[+] ConfigureEndpoints\n");
         for (int i = 0; i < len; i++) {
             // logger->debug("    | DeviceContextIndex: %d\n", configs[i].ep_id.DeviceContextID());
             // logger->debug("    | EndPointType: %s\n", usb::kEndpointTypeToName[configs[i].ep_type]);
             // logger->debug("    | MaxPacketSize: %d\n", configs[i].max_packet_size);
             // logger->debug("    | Interval: %d\n", configs[i].interval);
-        }
+        } */
 
         memset(&dev->InputContextPtr()->input_control_context, 0, sizeof(InputControlContext)); //  InputControlContextのデータを０クリアする。
         //  SlotContextのデータをデバイスコンテキスト内のデータで上書きする。
@@ -348,12 +348,9 @@ namespace usb::xhci
             ep_ctx->bits.error_count = 3;
         }
 
-        port_config_phase[port_id] = ConfigPhase::kConfiguringEndpoints;
-
         ConfigureEndpointCommandTRB cmd{dev->InputContextPtr(), dev->SlotID()};
         CommandRing()->Push(&cmd);
         RingCommandRing();
-
         return 0;
     }
 
@@ -365,16 +362,16 @@ namespace usb::xhci
 
     int Controller::OnEvent(CommandCompletionEventTRB *trb)
     {
-        int res;
         uint8_t port_id;
         uint32_t slot_id = trb->bits.slot_id;
         TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ
         uint32_t issuer_type = issuer_trb->bits.trb_type;
-        logger->set_level(logging::kDEBUG);
+        /* logger->set_level(logging::kDEBUG);
         logger->debug("[OnEvent] CommandCompletionEvent\n");
         logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
         logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
-        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]); */
+        
         if (issuer_type == EnableSlotCommandTRB::Type) {
             port_id = addressing_port; // EnableSlotを実行しているのはひとつだけ
             PortAt(port_id)->SetSlot(slot_id);
@@ -388,34 +385,10 @@ namespace usb::xhci
             // また、EP０の内容もコピーされているはずである。
             Device *dev = devmgr_.FindBySlot(slot_id);
             port_id = static_cast<uint8_t>(dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num);
-            if (addressing_port == 0) return -1;
-            if (port_id != addressing_port) return -1;
-            if (port_config_phase[port_id] != ConfigPhase::kAddressingDevice) return -1;
- 
-            if (dev->DeviceContextPtr()->endpoint_context[0].bits.ep_state) {
-                logger->info("[+] Endpoint0 Is Running.\n");
+            if (initializing_port[port_id]) {
+                task_manager->Wakeup(initializing_port[port_id]);
+                return 0;
             }
-            
-            // アドレス割当が完了したので、アドレス処理待ちの他のポートの割当を行う。
-            addressing_port = 0;
-            for (uint8_t i = MaxPorts(); i > 0; i--) {
-                if (port_config_phase[i] == ConfigPhase::kWaitingAddressed) {
-                    Port *port = PortAt(i);
-                    res = ResetPort(port);
-                    if (res == -1) {
-                        logger->error("Failed To Reset Port%02hhd\n", i);
-                        continue;
-                    }
-                    break;
-                }
-            }
-
-            // ここまでで、デバイスにアドレスを割り当てるのが完了した。
-            // 次は、他のデバイスのアドレス割当を行って行く。
-            // 後は、リセット処理が完了次第、イベントリングで実行が進んでいく。
-            // ここからは、USBデバイスの初期化をすることになる
-            port_config_phase[port_id] = ConfigPhase::kInitializingDevice;
-            dev->StartInitialize();
         } else if (issuer_type == DisableSlotCommandTRB::Type) {
             if (trb->bits.completion_code == 1) {
                 logger->info("[+] Slot%02d Disabled.\n", slot_id);
@@ -430,12 +403,13 @@ namespace usb::xhci
             }
 
             port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
-            if (port_config_phase[port_id] != ConfigPhase::kConfiguringEndpoints) {
-                return -1;
+            if (initializing_port[port_id]) {
+                task_manager->Wakeup(initializing_port[port_id]);
+                return 0;
             }
-            logger->info("[+] Completed Configure Endpoint!\n");
+            // logger->info("[+] Completed Configure Endpoint!\n");
             // logger->info("DeviceContextPtr(): %p\n", dev->DeviceContextPtr());
-            return CompleteConfiguration(port_id, slot_id);
+            return -1;
         }
 
         return 0;
@@ -507,9 +481,8 @@ namespace usb::xhci
         
         uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
 
-        if (dev->IsInitialized() &&
-            port_config_phase[port_id] == ConfigPhase::kInitializingDevice) {
-            return ConfigureEndpoints(dev); // 呼ばれていない。。。
+        if (initializing_port[port_id]) { // 初期化中の時は毎度起こすようにする
+            task_manager->Wakeup(initializing_port[port_id]);
         }
         return -1;
     }
@@ -578,10 +551,6 @@ namespace usb::xhci
             printk("[DEBUG CTRer::AddressDev] FAILED!! AllocDevice\n");
             return -1;
         }
-        if (addressing_port != PortAt(port_id)->Number()) {
-            logger->error("This Port Is Not Addressing Port\n");
-            return -1;
-        }
 
         Device *device = devmgr_.FindBySlot(slot_id);
 
@@ -615,8 +584,6 @@ namespace usb::xhci
         //  7. DCBAAにデバイスコンテキストを追加する。
         devmgr_.LoadDCBAA(slot_id);
 
-        port_config_phase[port_id] = ConfigPhase::kAddressingDevice;
-
         //  8.  AddressDeviceCommandTRBの発行。
         AddressDeviceCommandTRB addr_dev_cmd(device->InputContextPtr(), slot_id);
         cr_.Push(&addr_dev_cmd);
@@ -625,19 +592,7 @@ namespace usb::xhci
         return 0;
     }
     
-    int Controller::CompleteConfiguration(uint8_t port_id, uint8_t slot_id)
-    {
-        logger->info("[+] Port%02d(Slot%02d) Reached To Configured State\n", port_id, slot_id);
 
-        Device *dev = devmgr_.FindBySlot(slot_id);
-        if (dev == NULL) {
-            logger->error("Device Is Not Exist.\n");
-            return -1;
-        }
-        dev->OnEndpointsConfigured();
-        port_config_phase[port_id] = ConfigPhase::kConfigured;
-        return 0;
-    }
 
 
     Controller *xhc;
@@ -700,6 +655,7 @@ namespace usb::xhci
         uint8_t port_num = static_cast<uint8_t>(port_num_);
         Port *port = xhc->PortAt(port_num);
 
+        
         printk("[TASK %ld] PORT%d WILL BE INITIALIZED.\n", id, port_num);
         if (xhc->ResetPort(port)) {
             ErrorOnInit();
@@ -715,10 +671,43 @@ namespace usb::xhci
         WaitEvent(port_num);
 
         uint8_t slot_num = port->Slot();
-        printk("[+] SLOT%d ENABLED FOR PORT%d\n", slot_num, addressing_port);
+        printk("SLOT%d ENABLED FOR PORT%d\n", slot_num, addressing_port);
         xhc->slot_to_port_[slot_num] = port_num;
         xhc->AddressDevice(port_num, slot_num);
 
+        WaitEvent(port_num);
+
+        printk("ADDRESS DEVICE ON PORT%d\n", port_num);
+        Device *dev = xhc->devmgr_.FindBySlot(slot_num);
+            
+        /*     // アドレス割当が完了したので、アドレス処理待ちの他のポートの割当を行う。
+            addressing_port = 0;
+            for (uint8_t i = MaxPorts(); i > 0; i--) {
+                if (port_config_phase[i] == ConfigPhase::kWaitingAddressed) {
+                    Port *port = PortAt(i);
+                    res = ResetPort(port);
+                    if (res == -1) {
+                        logger->error("Failed To Reset Port%02hhd\n", i);
+                        continue;
+                    }
+                    break;
+                }
+            } */
+
+        dev->StartInitialize(); // デバイスの初期化処理
+
+        while (!dev->IsInitialized()) {
+            WaitEvent(port_num);   
+        }
+        printk("DEVICE CONFIGURED!!\n");
+        xhc->ConfigureEndpoints(dev);
+
+        WaitEvent(port_num);   
+
+        dev->OnEndpointsConfigured();
+        printk("PORT%d (SLOT%d) REACHED TO CONFIGURED STATE.\n", port_num, slot_num);
+        
+        initializing_port[port_num] = 0;
         Halt();
     }
 }
