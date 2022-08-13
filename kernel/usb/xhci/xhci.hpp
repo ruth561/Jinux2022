@@ -101,8 +101,4 @@ namespace usb::xhci
     // Event Ringに溜まっているものを処理する
     void ProcessEvents();
 
-    // USBデバイスの初期化を行う
-    // Portにデバイスが接続されていることを確認後タスクとして実行される
-    void InitUSBDeviceTask(uint64_t id, int64_t port);
-
 }

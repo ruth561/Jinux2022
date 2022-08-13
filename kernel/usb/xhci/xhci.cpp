@@ -1,10 +1,14 @@
 #include "xhci.hpp"
-
+#include <algorithm>
 int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
 extern TaskManager* task_manager;
-
+void panic(const char *s)
+{
+    printk(s);
+    Halt();
+}
 
 namespace pci 
 {
@@ -33,17 +37,103 @@ namespace pci
 namespace
 {
     using namespace usb::xhci;
+
+    Controller *xhc;
     
-    // ０なら初期化中でない
-    // ０でないならUSBデバイスを初期化中のタスクIDである
-    std::array<uint64_t, 256> initializing_port;
+    // 初期化中or初期化を待っているポート
+    // 先頭の値が現在初期化中のポートの番号
+    std::deque<uint8_t> initializing_ports{};
+    
+    uint64_t InitUSBDevTaskID;
 
-    // 初期化を待っているポート
-    std::vector<uint8_t> waiting_port{};
+    
+    // 初期化中にイベントを待つ
+    //
+    // このEventが来たら起こしてくれ、というメッセージ機能的なものをつくる
+    // 戻り値にタスクのメッセージをわたしてあげて、どんなEventを受け取ったのかを分かるようにする。
+    void WaitEvent()
+    {
+        Task *current_task = task_manager->CurrentTask();
+        current_task->Sleep();
+        // WakeUpされた時は、タスクのResvMessageに受け取ったイベントの情報を記した
+        // Messageが届いているので、そこからWakeupした理由を得る。
+        // メッセージは戻り値に渡してあげる。
+    }
 
-    //  現在リセットからアドレスの割当までの処理を行っているポートの番号。
-    //  どのポートもその処理上にない場合、この値は０を示す。
-    uint8_t addressing_port = 0;
+    //
+    // 初期化時に使用される関数
+    // 一つの初期化タスク内でwhileループをつかって実装したほうが見やすくなる。
+    // 初期化タスク内では、キューからpopして各ポートの初期化を行っていく。
+    // 初期化まちポートのキューを作る
+    // （キューを作る意味としては、途中でポートに接続される可能性もある）
+    // ポート接続があるたびにキューに入れて、初期化タスクをWakeupさせる
+    //
+    void InitUSBDevTask(uint64_t id, int64_t _)
+    {
+        while (true) {
+            if (initializing_ports.empty()) { // 初期化するポートがない時
+                WaitEvent();
+                continue;
+            }
+            uint8_t port_num = initializing_ports.front();
+            Port *port = xhc->PortAt(port_num);
+
+            printk("PORT%d WILL BE INITIALIZED.\n", port_num);
+            if (xhc->ResetPort(port)) {
+                initializing_ports.pop_front();
+                WaitEvent();
+                continue;
+            }
+
+            WaitEvent();
+
+            printk("PORT%d RESET COMPLETED.\n", port_num);
+            if (xhc->EnableSlot(port)) {
+                initializing_ports.pop_front();
+                WaitEvent();
+                continue;
+            }
+
+            WaitEvent();
+
+            uint8_t slot_num = port->Slot();
+            printk("SLOT%d ENABLED FOR PORT%d\n", slot_num, port_num);
+            xhc->slot_to_port_[slot_num] = port_num;
+            if (xhc->AddressDevice(port_num, slot_num)) {
+                initializing_ports.pop_front();
+                WaitEvent();
+                continue;
+            }
+
+            WaitEvent();
+
+            printk("ADDRESS DEVICE ON PORT%d\n", port_num);
+            Device *dev = xhc->devmgr_.FindBySlot(slot_num);
+            if (dev->StartInitialize()) {
+                initializing_ports.pop_front();
+                WaitEvent();
+                continue;
+            }
+
+            while (!dev->IsInitialized()) {
+                WaitEvent();
+            }
+            printk("DEVICE CONFIGURED!!\n");
+            if (xhc->ConfigureEndpoints(dev)) {
+                initializing_ports.pop_front();
+                WaitEvent();
+                continue;
+            }
+
+            WaitEvent();   
+
+            dev->OnEndpointsConfigured();
+            printk("PORT%d (SLOT%d) REACHED TO CONFIGURED STATE.\n", port_num, slot_num);
+            
+            initializing_ports.pop_front();
+        }
+
+    }
     
     //  ポートスピードからMaxPacketSizeの値を定める関数
     //  よく理解していないので、あとでUSBの仕様書を読んで理解したい。
@@ -59,8 +149,6 @@ namespace
     }
 
 } // namespace
-
-
 
 
 
@@ -155,45 +243,24 @@ namespace usb::xhci
 
     void Controller::AllPortsInit()
     {
-        //  ソフトウェア内部での各ポートの状態を初期化して置く。
-        addressing_port = 0;
-        for (int i = 0; i < 256; i++) {
-            initializing_port[i] = 0;
-        }
-
-        //  各ポートのレジスタの値を解析し、USBデバイスが接続されている
-        //  ポートにリセット処理を開始するように促す。
         for (uint8_t port_num = MaxPorts(); port_num > 0; port_num--) {
+            // デバイスが接続されているポートをinitializing_portsにpushしていく
             Port *port = PortAt(port_num);
-            // printk("Port %02d: IsConnected=%d IsEnabled=%d IsConnectStatusChanged=%d\n", 
-            //    port.Number(), 
-            //    port.IsConnected(),
-            //    port.IsEnabled(), 
-            //    port.IsConnectStatusChanged());
 
-            //  各ステータスフラグのクリアを行う。
             if (port->IsConnectStatusChanged()) 
                 port->ClearConnectStatusChanged();
             if (port->IsPortResetChanged())  
                 port->ClearPortResetChange();
 
-            //  デバイスが接続されているポートをリセットする。
             if (port->IsConnected()) {
-                waiting_port.push_back(port->Number());
+                __asm__("cli");
+                if (std::find(initializing_ports.begin(), initializing_ports.end(), port->Number()) == initializing_ports.end()) { 
+                    initializing_ports.push_back(port->Number());
+                }
+                __asm__("sti");
             }
         }
-        if (waiting_port.empty()) {
-            return;
-        }
-        uint8_t port_num = waiting_port.back();
-        waiting_port.pop_back();
-        task_manager
-            ->NewTask()
-            ->InitContext(InitUSBDeviceTask, static_cast<int64_t>(port_num))
-            ->Wakeup(3); // カーネルの特権レベルで実行
-        
-        // Halt(); // 一旦停止しておく
-        // ResetPort(&port);
+        task_manager->Wakeup(InitUSBDevTaskID);
     }
 
     Ring *Controller::CommandRing()
@@ -354,40 +421,35 @@ namespace usb::xhci
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]); */
         
         if (issuer_type == EnableSlotCommandTRB::Type) {
-            port_id = addressing_port; // EnableSlotを実行しているのはひとつだけ
-            PortAt(port_id)->SetSlot(slot_id);
-            if (initializing_port[port_id]) {
-                task_manager->Wakeup(initializing_port[port_id]);
-                return 0;
+            if (initializing_ports.empty()) {
+                panic("[OnEvent] Enable Slot But There Are No Initializing Port.\n");
             }
-        } else if (issuer_type == AddressDeviceCommandTRB::Type) {
+            port_id = initializing_ports.front();
+            PortAt(port_id)->SetSlot(slot_id);
+            task_manager->Wakeup(InitUSBDevTaskID);
+            return 0;
+        }
+        if (issuer_type == AddressDeviceCommandTRB::Type) {
             // このコマンドが正常に完了した場合、インプットスロットの内容は、
             // 全てアウトプットスロットの内容にコピーされているはずである。
             // また、EP０の内容もコピーされているはずである。
-            Device *dev = devmgr_.FindBySlot(slot_id);
-            port_id = static_cast<uint8_t>(dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num);
-            if (initializing_port[port_id]) {
-                task_manager->Wakeup(initializing_port[port_id]);
-                return 0;
-            }
-        } else if (issuer_type == DisableSlotCommandTRB::Type) {
+            task_manager->Wakeup(InitUSBDevTaskID);
+            return 0;
+        }
+        if (issuer_type == DisableSlotCommandTRB::Type) {
             if (trb->bits.completion_code == 1) {
                 logger->info("[+] Slot%02d Disabled.\n", slot_id);
                 slot_to_port_[slot_id] = 0;
                 devmgr_.DisableSlot(slot_id); // デバイス用に確保したメモリ領域を確保などする
             }
-        } else if (issuer_type == ConfigureEndpointCommandTRB::Type) {
+        }
+        if (issuer_type == ConfigureEndpointCommandTRB::Type) {
             Device *dev = devmgr_.FindBySlot(slot_id);
             if (dev == nullptr) {
                 logger->error("[OnEvent::ConfigureEndpointCommand]\n");
                 return -1;
             }
-
-            port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
-            if (initializing_port[port_id]) {
-                task_manager->Wakeup(initializing_port[port_id]);
-                return 0;
-            }
+            task_manager->Wakeup(InitUSBDevTaskID);
             // logger->info("[+] Completed Configure Endpoint!\n");
             // logger->info("DeviceContextPtr(): %p\n", dev->DeviceContextPtr());
             return -1;
@@ -414,7 +476,11 @@ namespace usb::xhci
         if (port->IsConnectStatusChanged()) { // ポート接続の変化
             if (port->IsConnected()) {
                 logger->info("[+] Device Attached To Port%hhd.\n", port->Number());
-                res = ResetPort(port);
+                if (std::find(initializing_ports.begin(), initializing_ports.end(), port->Number()) == initializing_ports.end()) { // 配列に含まれていない場合
+                    initializing_ports.push_back(port->Number());
+                    task_manager->Wakeup(InitUSBDevTaskID);
+                }
+                return 0;
             } else {
                 logger->info("[+] Device Detached From Port%hhd\n", port->Number());
                 // ポートにスロットが割り当てられていれば、そのスロットを無効にする
@@ -428,10 +494,7 @@ namespace usb::xhci
             port->ClearConnectStatusChanged();
         }
         if (port->IsPortResetChanged()) { // リセット処理が終わった場合
-            if (initializing_port[port_id]) {
-                task_manager->Wakeup(initializing_port[port_id]);
-                return 0;
-            }
+            task_manager->Wakeup(InitUSBDevTaskID);
             return -1;
         }
 
@@ -460,20 +523,17 @@ namespace usb::xhci
         
         uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
 
-        if (initializing_port[port_id]) { // 初期化中の時は毎度起こすようにする
-            task_manager->Wakeup(initializing_port[port_id]);
+        if (port_id == initializing_ports.front()) { // 初期化中の時は毎度起こすようにする
+            task_manager->Wakeup(InitUSBDevTaskID);
         }
         return -1;
     }
 
     int Controller::ResetPort(Port *port)
     {
-        if (!port->IsConnected()) {
-            /*  指定したポートにUSBデバイスが接続されていない場合は、
-                エラーを返す。 */
+        if (!port->IsConnected()) { // 指定したポートにUSBデバイスが接続されていない場合は、エラーを返す。
             return -1;
         }
-        addressing_port = port->Number();
         port->Reset();
         return 0;
     }
@@ -484,7 +544,7 @@ namespace usb::xhci
             これらの条件を満たしていない場合は、エラーを吐く。 */
         if (!port->IsEnabled()) return -1; // ポートが有効か？
         if (!port->IsPortResetChanged()) return -1; // リセット処理が完了しているか？
-        if (addressing_port != port->Number()) {
+        if (initializing_ports.front() != port->Number()) {
             logger->error("This Port Is Not Addressing Port\n");
             return -1;
         }
@@ -524,7 +584,7 @@ namespace usb::xhci
         EndpointContext *ep0_ctx = device->InputContextPtr()->EnableEndpoint(DeviceContextIndex{1});
 
         //  3. InputSlotContextを初期化。
-        Port *port = PortAt(addressing_port);
+        Port *port = PortAt(initializing_ports.front());
         slot_ctx->bits.root_hub_port_num = port->Number();
         slot_ctx->bits.route_string = 0;
         slot_ctx->bits.context_entries = 1;
@@ -558,10 +618,6 @@ namespace usb::xhci
     }
     
 
-
-
-    Controller *xhc;
-
 // カーネルから参照される手続き
     void Initialize()
     {
@@ -581,6 +637,13 @@ namespace usb::xhci
         xhc = new Controller(mmio_base);
         xhc->Initializer();
 
+        // デバイスの初期化タスクを起動しておく
+        InitUSBDevTaskID = task_manager
+            ->NewTask()
+            ->InitContext(InitUSBDevTask, 0)
+            ->Wakeup(3) // カーネルの特権レベルで実行
+            ->ID(); 
+
         xhc->Run();
         xhc->SendNoOpCommand();
         
@@ -595,93 +658,5 @@ namespace usb::xhci
             xhc->ProcessEvent();
         }
     }
-
-    // 初期化中にイベントを待つ
-    //
-    // このEventが来たら起こしてくれ、というメッセージ機能的なものをつくる
-    // 戻り値にタスクのメッセージをわたしてあげて、どんなEventを受け取ったのかを分かるようにする。
-    void WaitEvent(uint8_t port_num)
-    {
-        Task *current_task = task_manager->CurrentTask();
-        initializing_port[port_num] = current_task->ID();
-        current_task->Sleep();
-        // WakeUpされた時は、タスクのResvMessageに受け取ったイベントの情報を記した
-        // Messageが届いているので、そこからWakeupした理由を得る。
-        // メッセージは戻り値に渡してあげる。
-    }
-     
-    // 初期化が終了or失敗したら呼び出される
-    // 他のポートの初期化を始め、自身のタスクをKILLする
-    void Finish() {
-        // アドレス割当が完了したので、アドレス処理待ちの他のポートの割当を行う。
-        addressing_port = 0;
-        if (!waiting_port.empty()) {
-            uint8_t next_port_num = waiting_port.back();
-            waiting_port.pop_back();
-            task_manager
-                ->NewTask()
-                ->InitContext(InitUSBDeviceTask, static_cast<int64_t>(next_port_num))
-                ->Wakeup(3); // カーネルの特権レベルで実行
-        }
-
-        while (true) {
-            task_manager->CurrentTask()->Sleep();
-        }
-    }
-
-//
-// 初期化時に使用される関数
-// 一つの初期化タスク内でwhileループをつかって実装したほうが見やすくなる。
-// 初期化タスク内では、キューからpopして各ポートの初期化を行っていく。
-// 初期化まちポートのキューを作る
-// （キューを作る意味としては、途中でポートに接続される可能性もある）
-// ポート接続があるたびにキューに入れて、初期化タスクをWakeupさせる
-//
-    void InitUSBDeviceTask(uint64_t id, int64_t port_num_)
-    {
-        uint8_t port_num = static_cast<uint8_t>(port_num_);
-        Port *port = xhc->PortAt(port_num);
-
-        printk("[TASK %ld] PORT%d WILL BE INITIALIZED.\n", id, port_num);
-        if (xhc->ResetPort(port)) {
-            Finish();
-        }
-
-        WaitEvent(port_num);
-
-        printk("PORT%d RESET COMPLETED.\n", port_num);
-        if (xhc->EnableSlot(port)) {
-            Finish();
-        }
-
-        WaitEvent(port_num);
-
-        uint8_t slot_num = port->Slot();
-        printk("SLOT%d ENABLED FOR PORT%d\n", slot_num, addressing_port);
-        xhc->slot_to_port_[slot_num] = port_num;
-        xhc->AddressDevice(port_num, slot_num);
-
-        WaitEvent(port_num);
-
-        printk("ADDRESS DEVICE ON PORT%d\n", port_num);
-        Device *dev = xhc->devmgr_.FindBySlot(slot_num);
-
-        dev->StartInitialize(); // デバイスの初期化処理
-
-        while (!dev->IsInitialized()) {
-            WaitEvent(port_num);
-        }
-        printk("DEVICE CONFIGURED!!\n");
-        xhc->ConfigureEndpoints(dev);
-
-        WaitEvent(port_num);   
-
-        dev->OnEndpointsConfigured();
-        printk("PORT%d (SLOT%d) REACHED TO CONFIGURED STATE.\n", port_num, slot_num);
-        
-        initializing_port[port_num] = 0;
-        
-        // 完全にこのタスクをKILLしたい
-        Finish();
-    }
+  
 }

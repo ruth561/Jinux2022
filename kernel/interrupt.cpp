@@ -68,7 +68,7 @@ namespace
         }
     }
 
-    void PrintNumber(uint8_t value)
+/*     void PrintNumber(uint8_t value)
     {
         printk("0x");
         for (int i = 2; i > 0; i--) {
@@ -91,7 +91,7 @@ namespace
             PrintHex(static_cast<uint8_t>((value >> (4 * i - 4)) & 0xf));
         }
     }
-
+ */
     void PrintNumber(uint64_t value)
     {
         printk("0x");
