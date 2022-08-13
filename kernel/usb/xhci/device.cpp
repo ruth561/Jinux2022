@@ -215,7 +215,8 @@ namespace usb::xhci
         if (trb->bits.completion_code != 1 &&
             trb->bits.completion_code != 13) {
                 //  SuccessでもShortPacketsでもない場合
-                logger->error("[Device::OnTransferEventReceived] Invalid Completion Code.\n");
+                logger->error("[Device::OnTransferEventReceived] Invalid Completion Code %d.\n", trb->bits.completion_code);
+                logger->error("%s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
                 return -1;
         }
 

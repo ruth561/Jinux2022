@@ -8,6 +8,7 @@
 #include "../../pci.hpp"
 #include "../../logging.hpp"
 #include "../../task.hpp"
+#include "../../memory_manager.hpp"
 
 
 

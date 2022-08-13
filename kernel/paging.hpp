@@ -64,6 +64,9 @@ const size_t kPageDirectoryCount = 300; */
 // 恒等変換のページングを行う。
 void SetupIdentityPageTable();
 
+// 指定したメモリ領域をIDマップのエントリに追加する
+int SetIDMapEntry(LinearAddress4Level linear_address);
+
 // リニアアドレスから物理アドレスを算出する関数
 // 4level paging方式であることを前提にする。
 // CR3->pml4->pdpt->pd->ptの順で参照する。

@@ -4,6 +4,8 @@ int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
 extern TaskManager* task_manager;
+extern BitmapMemoryManager* memory_manager;
+
 void panic(const char *s)
 {
     printk(s);
@@ -47,8 +49,7 @@ namespace
     uint64_t InitUSBDevTaskID;
 
     
-    // 初期化中にイベントを待つ
-    //
+    // InitUSBDevTaskから呼び出される手続きでタスクをスリープする
     // このEventが来たら起こしてくれ、というメッセージ機能的なものをつくる
     // 戻り値にタスクのメッセージをわたしてあげて、どんなEventを受け取ったのかを分かるようにする。
     void WaitEvent()
@@ -71,6 +72,7 @@ namespace
     void InitUSBDevTask(uint64_t id, int64_t _)
     {
         while (true) {
+            printk("WHILE!!!\n");
             if (initializing_ports.empty()) { // 初期化するポートがない時
                 WaitEvent();
                 continue;
@@ -378,8 +380,8 @@ namespace usb::xhci
                     int a = 0;
                     while ((1 << a) < configs[i].interval) a++;
                     ep_ctx->bits.interval = a + 3;
-                    logger->error("    | This Port Speed %d Is Not Available.\n", port_speed);
-                    return -1;
+                    /* logger->error("[ConfigEndpoint] This Port Speed %d Is Not Available.\n", port_speed);
+                    return -1; */
                 } else {
                     logger->error("This Pair Of Type And Port Speed Is Not Implemented..\n");
                     return -1;
@@ -469,9 +471,13 @@ namespace usb::xhci
         int res = -1;
         uint8_t port_id = static_cast<uint8_t>(trb->bits.port_id);
         Port *port = PortAt(port_id);
-        // logger->debug("[OnEvent] PortStatusChangeEvent\n");
-        // logger->debug("    | PortNumber: %hhd\n", port.Number());
-        // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+
+        logging::LoggingLevel current_level = logger->current_level();
+        logger->set_level(logging::kDEBUG);
+        logger->debug("[OnEvent] PortStatusChangeEvent\n");
+        logger->debug("    | PortNumber: %hhd\n", port->Number());
+        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        logger->set_level(current_level);
         
         if (port->IsConnectStatusChanged()) { // ポート接続の変化
             if (port->IsConnected()) {
@@ -503,15 +509,15 @@ namespace usb::xhci
 
     int Controller::OnEvent(TransferEventTRB *trb)
     {
-        // TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
-        // logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
-        // logger->set_level(logging::kINFO);
-        // logger->debug("[OnEvent] TransferEvent\n");
-        // logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
-        // logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
-        // logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
-        // logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        // logger->set_level(current_level);
+        /* TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
+        logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
+        logger->set_level(logging::kDEBUG);
+        logger->debug("[OnEvent] TransferEvent\n");
+        logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
+        logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
+        logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
+        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        logger->set_level(current_level); */
 
         uint8_t slot_id = trb->bits.slot_id;
         Device *dev = devmgr_.FindBySlot(slot_id); // デバイスの特定を行う
@@ -633,6 +639,15 @@ namespace usb::xhci
             pci::ConfigRead32(xhc_dev->bus, xhc_dev->device, xhc_dev->function, 0x14));
         uint64_t mmio_base = ((mmio_base_high << 32) | mmio_base_low) & ~0xflu;
         logger->debug("MMIO BASE: %lx\n", mmio_base);
+
+        LinearAddress4Level linear_address;
+        linear_address.data = mmio_base;
+        SetIDMapEntry(linear_address);
+        for (int i = 0; i < 10; i++) {
+            linear_address.data += kBytesPerFrame;
+            SetIDMapEntry(linear_address);
+        }
+        printk("SetIDMapEntry: 0x%lx\n", linear_address.data);
 
         xhc = new Controller(mmio_base);
         xhc->Initializer();

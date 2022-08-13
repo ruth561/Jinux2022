@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Wed Aug 10 11:38:48 2022
+# Make data base, printed on Sat Aug 13 23:37:25 2022
 
 # Variables
 
@@ -49,7 +49,7 @@ VSCODE_NLS_CONFIG = {"locale":"ja","availableLanguages":{"*":"ja"},"_languagePac
 # environment
 _ = /usr/share/code/code
 # environment
-JOURNAL_STREAM = 8:48624
+JOURNAL_STREAM = 8:47698
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -61,13 +61,15 @@ GIO_LAUNCHED_DESKTOP_FILE = /usr/share/applications/code.desktop
 # environment
 USERNAME = ruth
 # environment
+MANDATORY_PATH = /usr/share/gconf/ubuntu.mandatory.path
+# environment
 XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop
 # environment
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-MANAGERPID = 1621
+MANAGERPID = 1645
 # environment
 CLUTTER_IM_MODULE = fcitx
 # environment
@@ -81,7 +83,7 @@ PATH = /home/ruth/.local/bin:/opt/java/jdk-11.0.2/bin:/home/ruth/.local/bin:/usr
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1845,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1845
+SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/1902,unix/ruth-System-Product-Name:/tmp/.ICE-unix/1902
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -91,7 +93,7 @@ VSCODE_LOG_STACK = false
 # environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = 15a52568cd2e414fa67a3700418e7e3f
+INVOCATION_ID = 0887c2fc2ea64a60ad1982a9e8565525
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -101,7 +103,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 2197
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2263
 # automatic
 %F = $(notdir $%)
 # environment
@@ -115,7 +117,7 @@ PWD = /home/ruth/Documents/Jinux2022
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 1793
+SSH_AGENT_PID = 1839
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -151,7 +153,7 @@ SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-dbfa6832-994c-4b50-b5b2-4dfa729800b7.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-7a82b309-21a6-4826-a087-ebb0841f7a8e.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -186,6 +188,8 @@ GDK_BACKEND = x11
 +F = $(notdir $+)
 # environment
 QT_ACCESSIBILITY = 1
+# environment
+DEFAULTS_PATH = /usr/share/gconf/ubuntu.default.path
 # default
 MAKEFILES := 
 # automatic
@@ -213,9 +217,9 @@ GJS_DEBUG_OUTPUT = stderr
 # environment
 LANG = C
 # environment
-VSCODE_PID = 2197
+VSCODE_PID = 2263
 # variable set hash-table stats:
-# Load=101/1024=10%, Rehash=0, Collisions=13/123=11%
+# Load=103/1024=10%, Rehash=0, Collisions=13/125=10%
 
 # Pattern-specific Variable Values
 
@@ -223,9 +227,9 @@ VSCODE_PID = 2197
 
 # Directories
 
-# . (device 66306, inode 18743501): 15 files, no impossibilities.
+# . (device 66306, inode 18743501): 17 files, no impossibilities.
 
-# 15 files, no impossibilities in 1 directories.
+# 17 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -275,12 +279,13 @@ GNUmakefile:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 23 / storage = 200 B / avg = 8 B
-# current buf: size = 8162 B / used = 200 B / count = 23 / avg = 8 B
+# strcache buffers: 1 (0) / strings = 25 / storage = 215 B / avg = 8 B
+# current buf: size = 8162 B / used = 215 B / count = 25 / avg = 8 B
 
-# strcache performance: lookups = 26 / hit rate = 11%
+# strcache performance: lookups = 28 / hit rate = 10%
 # hash-table stats:
-# Load=23/8192=0%, Rehash=0, Collisions=1/26=4%
-# Finished Make data base on Wed Aug 10 11:38:48 2022
+ 
+# Load=25/8192=0%, Rehash=0, Collisions=1/28=4%
+# Finished Make data base on Sat Aug 13 23:37:25 2022
 
  

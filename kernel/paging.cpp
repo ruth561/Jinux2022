@@ -51,6 +51,62 @@ void SetupIdentityPageTable()
     // logger->info("[+] Identity paging structure mapped!!\n");
 }
 
+int SetIDMapEntry(LinearAddress4Level linear_address)
+{
+    PageMapEntry *pml4 = reinterpret_cast<PageMapEntry *>(GetCR3());
+    PageMapEntry *entry = &pml4[linear_address.bits.pml4];
+    if (!entry->bits.present) { // エントリが指すページマップ構造体が存在しない場合
+        FrameID frame = memory_manager->Allocate(1);
+        if (frame.ID() == kNullFrame.ID())
+            return 0;
+        memset(frame.Frame(), 0, sizeof(kBytesPerFrame));
+        entry->SetPointer(frame.Frame());
+        entry->bits.present = 1;
+        entry->bits.writable = 1;
+    }
+
+    PageMapEntry *pdpt = reinterpret_cast<PageMapEntry *>(entry->Pointer());
+    entry = &pdpt[linear_address.bits.pdpt];
+    if (!entry->bits.present) { // エントリが指すページマップ構造体が存在しない場合
+        FrameID frame = memory_manager->Allocate(1);
+        if (frame.ID() == kNullFrame.ID())
+            return 0;
+        memset(frame.Frame(), 0, sizeof(kBytesPerFrame));
+        entry->SetPointer(frame.Frame());
+        entry->bits.present = 1;
+        entry->bits.writable = 1;
+    }
+
+    PageMapEntry *directory = reinterpret_cast<PageMapEntry *>(entry->Pointer());
+    entry = &directory[linear_address.bits.directory];
+    if (!entry->bits.present) { // エントリが指すページマップ構造体が存在しない場合
+        FrameID frame = memory_manager->Allocate(1);
+        if (frame.ID() == kNullFrame.ID())
+            return 0;
+        memset(frame.Frame(), 0, sizeof(kBytesPerFrame));
+        entry->SetPointer(frame.Frame());
+        entry->bits.present = 1;
+        entry->bits.writable = 1;
+    }
+
+    PageMapEntry *table = reinterpret_cast<PageMapEntry *>(entry->Pointer());
+    entry = &table[linear_address.bits.table];
+    if (!entry->bits.present) { // エントリが指すページマップ構造体が存在しない場合
+        FrameID frame = memory_manager->Allocate(1);
+        if (frame.ID() == kNullFrame.ID())
+            return 0;
+        memset(frame.Frame(), 0, sizeof(kBytesPerFrame));
+        entry->SetPointer(frame.Frame());
+        entry->bits.present = 1;
+        entry->bits.writable = 1; // 書き込み可能か
+        entry->bits.page_size = 1; // このポインターが指す領域がページである
+    }
+
+    // logger->debug("Successed set page map at 0x%lx\n", linear_address.data);
+    return 1;
+}
+
+
 uintptr_t Translate4LevelPaging(uintptr_t linear_address)
 {
     LinearAddress4Level linear;
