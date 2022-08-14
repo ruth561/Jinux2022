@@ -9,6 +9,11 @@ namespace usb::xhci
     struct InputContext;
 
 //////////////////////// TRB String ////////////////////////
+    enum TRBCompletionCode 
+    {
+        kSuccess = 1,
+    };
+    
     inline const char* kTRBCompletionCodeToName[37] = {
         "Invalid",
         "Success",

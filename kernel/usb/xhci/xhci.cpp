@@ -8,6 +8,7 @@ extern BitmapMemoryManager* memory_manager;
 
 void panic(const char *s)
 {
+    logger->error("[!-- PANIC --!]\n");
     logger->error(s);
     Halt();
 }
@@ -75,7 +76,7 @@ namespace
             WaitEvent();
         }
     }
-    
+
     //
     // 初期化時に使用される関数
     // 一つの初期化タスク内でwhileループをつかって実装したほうが見やすくなる。
@@ -113,6 +114,7 @@ namespace
             }
 
             if (!WaitEvent()) {
+                logger->error("Failed To Enable Slot For Port%d.\n", port_num);
                 PostProcessing();
                 continue;
             }
@@ -440,11 +442,16 @@ namespace usb::xhci
         uint32_t slot_id = trb->bits.slot_id;
         TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ
         uint32_t issuer_type = issuer_trb->bits.trb_type;
-        /* logger->set_level(logging::kDEBUG);
+        Message msg;
+        msg.type = Message::Type::kInterruptXHCI;
+
+        logging::LoggingLevel current_level = logger->current_level();
+        logger->set_level(logging::kDEBUG);
         logger->debug("[OnEvent] CommandCompletionEvent\n");
         logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
         logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
-        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]); */
+        logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
+        logger->set_level(current_level);
         
         if (issuer_type == EnableSlotCommandTRB::Type) {
             if (initializing_ports.empty()) {
@@ -452,6 +459,8 @@ namespace usb::xhci
             }
             port_id = initializing_ports.front();
             PortAt(port_id)->SetSlot(slot_id);
+            msg.arg.xhc_port_init.success = (trb->bits.completion_code == TRBCompletionCode::kSuccess);
+            task_manager->SendMessage(InitUSBDevTaskID, msg);
             task_manager->Wakeup(InitUSBDevTaskID);
             return 0;
         }
@@ -579,14 +588,14 @@ namespace usb::xhci
         /*  ポートが有効かつリセット処理が無事終わった場合のみ処理が行われる。
             これらの条件を満たしていない場合は、エラーを吐く。 */
         if (!port->IsEnabled()) return -1; // ポートが有効か？
-        if (!port->IsPortResetChanged()) return -1; // リセット処理が完了しているか？
+        // if (!port->IsPortResetChanged()) return -1; // リセット処理が完了しているか？
         if (initializing_ports.front() != port->Number()) {
             logger->error("This Port Is Not Addressing Port\n");
             return -1;
         }
         // logger->info("[+] ENABLE SLOT FOR PORT%02hhd\n", port->Number());
 
-        port->ClearPortResetChange();
+        // port->ClearPortResetChange();
 
         EnableSlotCommandTRB command_trb = EnableSlotCommandTRB{};
         cr_.Push(&command_trb);

@@ -74,7 +74,7 @@ namespace logging
             va_start(ap, format);
             res = vsprintf(s, format, ap);
             va_end(ap);
-            printk("***");
+            // printk("***");
 
             console->PutString(s);
         }
