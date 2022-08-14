@@ -12,8 +12,9 @@ namespace usb::xhci
     enum TRBCompletionCode 
     {
         kSuccess = 1,
+        kShortPacket = 13,
     };
-    
+
     inline const char* kTRBCompletionCodeToName[37] = {
         "Invalid",
         "Success",

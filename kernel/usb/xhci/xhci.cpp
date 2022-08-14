@@ -61,8 +61,12 @@ namespace
         // WakeUpされた時は、タスクのResvMessageに受け取ったイベントの情報を記した
         // Messageが届いているので、そこからWakeupした理由を得る。
         // メッセージは戻り値に渡してあげる。
+        printk("Task.NumMessages: %d\n", current_task->NumMessages());
         Message msg = current_task->ReceiveMessage();
         if (msg.type != Message::Type::kInterruptXHCI) {
+            if (msg.type == Message::Type::kNullMessage) {
+                printk("Null Message!!!\n");
+            }
             panic("[usb::xhci::WaitEvent] This Message Is Invalid.\n");
         }
         return msg.arg.xhc_port_init.success;
@@ -98,11 +102,13 @@ namespace
 
             printk("PORT%d WILL BE INITIALIZED.\n", port_num);
             if (xhc->ResetPort(port)) {
+                logger->error("Error On Resetting Port%d.\n", port_num);
                 PostProcessing();
                 continue;
             }
 
             if (!WaitEvent()) {
+                logger->error("Failed To Reset Port%d.\n", port_num);
                 PostProcessing();
                 continue;
             }
@@ -128,6 +134,7 @@ namespace
             }
 
             if (!WaitEvent()) {
+                logger->error("Failed To Address Device For Port%d (Slot%d).\n", port_num, slot_num);
                 PostProcessing();
                 continue;
             }
@@ -140,6 +147,7 @@ namespace
             }
 
             if (!WaitEvent()) {
+                logger->error("Failed To Initialize Device Attached To Port%d.\n", port_num);
                 PostProcessing();
                 continue;
             }
@@ -151,6 +159,7 @@ namespace
             }
 
             if (!WaitEvent()) {
+                logger->error("Failed To Configure Endpoints For Port%d (Slot%d).\n", port_num, slot_num);
                 PostProcessing();
                 continue;
             } 
@@ -468,8 +477,12 @@ namespace usb::xhci
             // このコマンドが正常に完了した場合、インプットスロットの内容は、
             // 全てアウトプットスロットの内容にコピーされているはずである。
             // また、EP０の内容もコピーされているはずである。
+            if (initializing_ports.empty()) {
+                panic("[OnEvent] Address Device But There Are No Initializing Port.\n");
+            }
+            msg.arg.xhc_port_init.success = (trb->bits.completion_code == TRBCompletionCode::kSuccess);
+            task_manager->SendMessage(InitUSBDevTaskID, msg);
             task_manager->Wakeup(InitUSBDevTaskID);
-            return 0;
         }
         if (issuer_type == DisableSlotCommandTRB::Type) {
             if (trb->bits.completion_code == 1) {
@@ -481,12 +494,14 @@ namespace usb::xhci
         if (issuer_type == ConfigureEndpointCommandTRB::Type) {
             Device *dev = devmgr_.FindBySlot(slot_id);
             if (dev == nullptr) {
-                logger->error("[OnEvent::ConfigureEndpointCommand]\n");
-                return -1;
+                panic("[OnEvent::ConfigureEndpointCommand]\n");
             }
+            if (initializing_ports.empty()) {
+                panic("[OnEvent] Configure Endpoints But There Are No Initializing Port.\n");
+            }
+            msg.arg.xhc_port_init.success = (trb->bits.completion_code == TRBCompletionCode::kSuccess);
+            task_manager->SendMessage(InitUSBDevTaskID, msg);
             task_manager->Wakeup(InitUSBDevTaskID);
-            // logger->info("[+] Completed Configure Endpoint!\n");
-            // logger->info("DeviceContextPtr(): %p\n", dev->DeviceContextPtr());
             return -1;
         }
 
@@ -502,6 +517,7 @@ namespace usb::xhci
          * ・Enable（ポートがリセットによって有効化された）
          */
         int res = -1;
+        Message msg;
         uint8_t port_id = static_cast<uint8_t>(trb->bits.port_id);
         Port *port = PortAt(port_id);
 
@@ -514,11 +530,15 @@ namespace usb::xhci
         
         if (port->IsConnectStatusChanged()) { // ポート接続の変化
             if (port->IsConnected()) {
+                // TODO: ここが立て続けに２回呼ばれた時、意図しない動作が起こる可能性があるので注意したい
                 logger->info("[+] Device Attached To Port%hhd.\n", port->Number());
                 if (std::find(initializing_ports.begin(), initializing_ports.end(), port->Number()) == initializing_ports.end()) { // 配列に含まれていない場合
                     initializing_ports.push_back(port->Number());
                 }
                 if (initializing_ports.size() == 1) { // 他のポートが初期化していない場合
+                    msg.type = Message::Type::kInterruptXHCI;
+                    msg.arg.xhc_port_init.success = true;
+                    task_manager->SendMessage(InitUSBDevTaskID, msg);
                     task_manager->Wakeup(InitUSBDevTaskID);
                 }
             } else {
@@ -532,10 +552,11 @@ namespace usb::xhci
                 }
             }
             port->ClearConnectStatusChanged();
+            return 0;
         }
         if (port->IsPortResetChanged()) { // リセット処理が終わった場合
+            // printk("PORT RESETTED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
             port->ClearPortResetChange();
-            Message msg;
             msg.type = Message::Type::kInterruptXHCI;
             msg.arg.xhc_port_init.success = true;
             task_manager->SendMessage(InitUSBDevTaskID, msg);
@@ -548,7 +569,7 @@ namespace usb::xhci
 
     int Controller::OnEvent(TransferEventTRB *trb)
     {
-        /* TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
+        TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
         logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
         logger->set_level(logging::kDEBUG);
         logger->debug("[OnEvent] TransferEvent\n");
@@ -556,7 +577,7 @@ namespace usb::xhci
         logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
         logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        logger->set_level(current_level); */
+        logger->set_level(current_level);
 
         uint8_t slot_id = trb->bits.slot_id;
         Device *dev = devmgr_.FindBySlot(slot_id); // デバイスの特定を行う
@@ -568,8 +589,22 @@ namespace usb::xhci
         
         uint8_t port_id = dev->DeviceContextPtr()->slot_context.bits.root_hub_port_num;
 
-        if (port_id == initializing_ports.front()) { // 初期化中の時は毎度起こすようにする
-            task_manager->Wakeup(InitUSBDevTaskID);
+        if (port_id == initializing_ports.front()) { // 初期化中の時
+            Message msg;
+            msg.type = Message::Type::kInterruptXHCI;
+            if (trb->bits.completion_code != TRBCompletionCode::kSuccess &&
+                trb->bits.completion_code != TRBCompletionCode::kShortPacket) {
+                    msg.arg.xhc_port_init.success = false;
+                    task_manager->SendMessage(InitUSBDevTaskID, msg);
+                    task_manager->Wakeup(InitUSBDevTaskID);
+                    return -1;
+            }
+            if (dev->IsInitialized()) {
+                msg.arg.xhc_port_init.success = true;
+                task_manager->SendMessage(InitUSBDevTaskID, msg);
+                task_manager->Wakeup(InitUSBDevTaskID);
+                return 0;
+            }
         }
         return -1;
     }

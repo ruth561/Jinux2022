@@ -57,6 +57,7 @@ public:
 
     void SendMessage(const Message msg); // このタスクの持つメッセージキューにプッシュし、実行可能状態へ遷移
     Message ReceiveMessage(); // メッセージキューからポップする。何も入っていない場合、kNullMessageタイプのメッセージを返す。
+    int NumMessages() { return msgs_.size(); }
     
 private:
     uint64_t id_; // タスク固有の値
