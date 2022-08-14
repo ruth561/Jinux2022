@@ -67,7 +67,7 @@ extern "C" void KernelMainNewStack(
 
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
-    logger->set_level(logging::kINFO); // 出力減らす
+    logger->set_level(logging::kERROR); // 出力減らす
 
     usb::xhci::Initialize(); // xHCの初期化 
 

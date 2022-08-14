@@ -54,4 +54,4 @@ usb/xhci/xhci.o: usb/xhci/xhci.cpp usb/xhci/xhci.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
   usb/xhci/../../task.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/deque \
-  usb/xhci/../../message.hpp
+  usb/xhci/../../message.hpp usb/xhci/../../usb/xhci/trb.hpp

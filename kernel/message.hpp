@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "usb/xhci/trb.hpp"
 
 // カーネルのmain内で処理される割り込み一つあたりのデータ。
 struct Message
@@ -16,8 +17,7 @@ struct Message
             int value;
         } timer;
         struct {
-            uint64_t port_num;
-            int value;
+            bool success; // 成功した場合
         } xhc_port_init;
     } arg;
 };
