@@ -141,6 +141,31 @@ namespace
 
             printk("ADDRESS DEVICE ON PORT%d\n", port_num);
             Device *dev = xhc->devmgr_.FindBySlot(slot_num);
+            if (dev->BeforeInitialize()) {
+                PostProcessing();
+                continue;
+            }
+            
+            if (!WaitEvent()) {
+                logger->error("Failed To Get Device Descriptor Top.\n");
+                PostProcessing();
+                continue;
+            }
+
+            printk("MAX PACKET SIZE IS %d.\n", dev->MaxPacketSize());
+            if (xhc->ReConfigureDefaultControlPipe(dev)) {
+                PostProcessing();
+                continue;
+            }
+
+            if (!WaitEvent()) {
+                logger->error("Failed To Re Configure Default Control Pipe.\n");
+                PostProcessing();
+                continue;
+            }
+
+            printk("RECONFIGURE EP0.\n");
+            Halt();
             if (dev->StartInitialize()) {
                 PostProcessing();
                 continue;
@@ -440,6 +465,45 @@ namespace usb::xhci
         return 0;
     }
 
+    int Controller::ReConfigureDefaultControlPipe(Device *dev)
+    {
+        // EP0を再設定する
+        memset(&dev->InputContextPtr()->input_control_context, 0, sizeof(InputControlContext));
+        // memcpy(&dev->InputContextPtr()->slot_context, &dev->DeviceContextPtr()->slot_context, sizeof(SlotContext));
+        //  2. InputControlContextのA０とA１を１にする。
+        SlotContext *slot_ctx = dev->InputContextPtr()->EnableSlotContext();
+        EndpointContext *ep0_ctx = dev->InputContextPtr()->EnableEndpoint(DeviceContextIndex{1});
+
+        //  3. InputSlotContextを初期化。
+        Port *port = PortAt(initializing_ports.front());
+        slot_ctx->bits.root_hub_port_num = port->Number();
+        slot_ctx->bits.route_string = 0;
+        slot_ctx->bits.context_entries = 1;
+        slot_ctx->bits.speed = port->Speed();     //  ここよく分かってない。
+
+        //  4. EP０の初期化。
+        ep0_ctx->bits.ep_type = 4;
+        ep0_ctx->bits.max_packet_size = dev->MaxPacketSize();
+        ep0_ctx->bits.max_burst_size = 0;
+
+        //  5. デバイスのデフォルトコントロールパイプにTransferRingを作成し初期化
+        Ring *ep0_transfer_ring = dev->AllocTransferRing(DeviceContextIndex{1}, 32);
+
+        //  6. EP０コンテキストにTransferRingのポインタを書き込む
+        ep0_ctx->SetTransferRingBuffer(ep0_transfer_ring->Buffer());
+        ep0_ctx->bits.dequeue_cycle_state = 1;
+        ep0_ctx->bits.interval = 0;
+        ep0_ctx->bits.max_primary_streams = 0;
+        ep0_ctx->bits.mult = 0;
+        ep0_ctx->bits.error_count = 3;
+
+
+        ConfigureEndpointCommandTRB cmd{dev->InputContextPtr(), dev->SlotID()};
+        CommandRing()->Push(&cmd);
+        RingCommandRing();
+        return 0;
+    }
+
 // Controller(private)
     void Controller::RingCommandRing() {
         doorbell_[0].Ring(0, 0);
@@ -599,7 +663,7 @@ namespace usb::xhci
                     task_manager->Wakeup(InitUSBDevTaskID);
                     return -1;
             }
-            if (dev->IsInitialized()) {
+            if (dev->IsInitialized() || dev->InitializePhase() == 0) {
                 msg.arg.xhc_port_init.success = true;
                 task_manager->SendMessage(InitUSBDevTaskID, msg);
                 task_manager->Wakeup(InitUSBDevTaskID);

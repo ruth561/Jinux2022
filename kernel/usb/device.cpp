@@ -51,6 +51,13 @@ namespace
 
 namespace usb
 {
+    int Device::BeforeInitialize()
+    {
+        initialize_phase_ = 0;
+        max_packet_size_ = 0;
+        return GetDescriptor(kDefaultControlPipeID, descriptor_type::kDevice, 0, buf_, 8);
+    }
+
     int Device::StartInitialize()
     {
         is_initialized_ = false;
@@ -187,10 +194,15 @@ namespace usb
         }
 
         // 初期化中の場合
-        if (initialize_phase_ == 1) {
+        DeviceDescriptor *dev_desc;
+        if (initialize_phase_ == 0) {
+            dev_desc = reinterpret_cast<DeviceDescriptor *>(buf);
+            max_packet_size_ = dev_desc->max_packet_size;
+            return 0;
+        } else if (initialize_phase_ == 1) {
             // GET_DESCRIPTORからの返信
             // GET_DESCRIPTOR(CONFIGURATION)を実行する
-            DeviceDescriptor *dev_desc = reinterpret_cast<DeviceDescriptor *>(buf);
+            dev_desc = reinterpret_cast<DeviceDescriptor *>(buf);
             return InitializePhase1(dev_desc);
         } else if (initialize_phase_ == 2) {
             // GET_DESCRIPTOR(CONFIGURATION)からの返信

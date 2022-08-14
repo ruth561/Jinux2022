@@ -23,7 +23,10 @@ namespace usb
 
         virtual int InterruptIn(EndpointID ep_id, void *buf, int len) { return -1; }
         virtual int InterruptOut(EndpointID ep_id, void *buf, int len) { return -1; }
- 
+
+        // 初期化の前に呼び出す
+        int BeforeInitialize();
+
         // デバイスディスクリプタの取得をリクエスト
         int StartInitialize();
 
@@ -53,6 +56,10 @@ namespace usb
 
         bool IsInitialized() { return is_initialized_; }
 
+        int InitializePhase() { return initialize_phase_; }
+
+        uint32_t MaxPacketSize() { return max_packet_size_; }
+
         //  このクラスの使用するエンドポイントのコンフィグ情報が詰まった配列を返す。
         EndpointConfig *EndpointConfigs() { return ep_configs_; }
         int NumEndpointConfig() { return num_ep_configs_; }
@@ -79,6 +86,8 @@ namespace usb
         //  ０≦config_index_≦num_configurations_−１
         //  Initialize１で得られるデバイスディスクリプタの情報をもとに設定される。
         uint8_t config_index_;
+
+        uint32_t max_packet_size_ = 0;
 
         //  初期化処理が完了しているか。
         bool is_initialized_ = false;

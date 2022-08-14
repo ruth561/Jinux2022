@@ -46,6 +46,9 @@ namespace usb::xhci
         //  デバイスのオブジェクトには、このOSで使用可能なインターフェースの
         //  使用するエンドポイントが列挙されている。
         int ConfigureEndpoints(Device *dev);
+        
+        // デバイスディスクリプタの値を読み、MaxPacketSizeを正しいものに設定し直す
+        int ReConfigureDefaultControlPipe(Device *dev);
     
     // private:
         uint8_t device_size_; // デバイススロットの有効化数 
