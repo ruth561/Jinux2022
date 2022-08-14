@@ -574,6 +574,39 @@ namespace usb::xhci
         } */
     } __attribute__((packed));
     
+    union EvaluateContextCommandTRB // DeviceContextのパラメータの変更に用いる
+    {
+        static const uint32_t Type = 13;
+        uint32_t data[4];
+        struct {
+            uint64_t : 4;
+            volatile uint64_t input_context_pointer : 60;
+
+            uint32_t : 32;
+
+            volatile uint32_t cycle_bit : 1;
+            uint32_t : 8;
+            volatile uint32_t block_set_address_request : 1; // not used
+            volatile uint32_t trb_type : 6;
+            uint32_t : 8;
+            volatile uint32_t slot_id : 8;
+        } __attribute__((packed)) bits;
+
+        void *Pointer() const {
+            return reinterpret_cast<void *>(bits.input_context_pointer << 4);
+        }
+
+        void SetPointer(void *p) {
+            bits.input_context_pointer = reinterpret_cast<uint64_t>(p) >> 4;
+        }
+
+        EvaluateContextCommandTRB(InputContext* input_context, uint8_t slot_id) : data{} {
+            bits.trb_type = Type;
+            bits.slot_id = slot_id;
+            SetPointer(input_context);
+        }
+    } __attribute__((packed));
+    
 
 
 //  OTHER TRB
