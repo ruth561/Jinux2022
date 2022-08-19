@@ -47,4 +47,4 @@ usb/classdriver/hid.o: usb/classdriver/hid.cpp usb/classdriver/hid.hpp \
   usb/classdriver/../../interrupt.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/array \
   usb/classdriver/../../asmfunc.h usb/classdriver/../../message.hpp \
-  usb/classdriver/../../task.hpp
+  usb/classdriver/../../usb/xhci/trb.hpp usb/classdriver/../../task.hpp

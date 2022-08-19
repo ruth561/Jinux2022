@@ -494,13 +494,13 @@ namespace usb::xhci
         Message msg;
         msg.type = Message::Type::kInterruptXHCI;
 
-        logging::LoggingLevel current_level = logger->current_level();
+        /* logging::LoggingLevel current_level = logger->current_level();
         logger->set_level(logging::kDEBUG);
         logger->debug("[OnEvent] CommandCompletionEvent\n");
         logger->debug("    | Issuer: %s (%p)\n", kTRBTypeToName[issuer_trb->bits.trb_type], issuer_trb);
         logger->debug("    | SlotID: %d\n", trb->bits.slot_id);
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        logger->set_level(current_level);
+        logger->set_level(current_level); */
         
         if (issuer_type == EnableSlotCommandTRB::Type) {
             if (initializing_ports.empty()) {
@@ -570,12 +570,12 @@ namespace usb::xhci
         uint8_t port_id = static_cast<uint8_t>(trb->bits.port_id);
         Port *port = PortAt(port_id);
 
-        logging::LoggingLevel current_level = logger->current_level();
+        /* logging::LoggingLevel current_level = logger->current_level();
         logger->set_level(logging::kDEBUG);
         logger->debug("[OnEvent] PortStatusChangeEvent\n");
         logger->debug("    | PortNumber: %hhd\n", port->Number());
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        logger->set_level(current_level);
+        logger->set_level(current_level); */
         
         if (port->IsConnectStatusChanged()) { // ポート接続の変化
             if (port->IsConnected()) {
@@ -618,7 +618,7 @@ namespace usb::xhci
 
     int Controller::OnEvent(TransferEventTRB *trb)
     {
-        TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
+        /* TRB *issuer_trb = trb->Pointer(); // このイベントを発行したTRBへのポインタ 
         logging::LoggingLevel current_level = logger->current_level(); //  一旦出力を減らす
         logger->set_level(logging::kDEBUG);
         logger->debug("[OnEvent] TransferEvent\n");
@@ -626,7 +626,7 @@ namespace usb::xhci
         logger->debug("    | SlotID: %hhd\n", trb->bits.slot_id);
         logger->debug("    | EndpointID: %hhd\n", trb->bits.endpoint_id);
         logger->debug("    | CompletionCode: %s\n", kTRBCompletionCodeToName[trb->bits.completion_code]);
-        logger->set_level(current_level);
+        logger->set_level(current_level); */
 
         uint8_t slot_id = trb->bits.slot_id;
         Device *dev = devmgr_.FindBySlot(slot_id); // デバイスの特定を行う

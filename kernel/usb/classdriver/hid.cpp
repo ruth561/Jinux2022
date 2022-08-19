@@ -116,7 +116,9 @@ namespace usb
 
     void HIDKeyboardDriver::OnInterruptCompleted(EndpointID ep_id, void *buf, int len)
     {
-        // logger->debug("Received Data From HID Device!!\n");
+        // TODO:
+        // キーボードを押したときのデータが連続で来ているかどうか、一回手を話したかの判定が難しい
+        // 現状、素早い入力への対応はできているが、たまに連続したデータが見られるようになった。
         uint8_t *data;
         data = reinterpret_cast<uint8_t *>(buf);
         /* logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
@@ -124,14 +126,17 @@ namespace usb
         
         ModifierKey modifier_key{data[0]};
         char key[2] = {0, 0};
-        uint32_t current_tick = timer_manager->CurrentTick(); 
+        /* uint32_t current_tick = timer_manager->CurrentTick(); 
         if (current_tick < last_tick_ + key_stroke_interval_) {
             // logger->info("Current Tick: %d, Last Tick: %d\n", current_tick, last_tick_);
             // 最後に入力検知をしてから十分な時間が立っていなければ出力しない
             RequestKeyCodeViaIntEP();
             return;
         }
-        last_tick_ = current_tick; // キー入力の時間を更新
+        last_tick_ = current_tick; // キー入力の時間を更新 */
+        for (int i = 0; i < 8; i++) {
+            printk("%02x ", data[i]);
+        }
 
         if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
             // 入力を検知した文字を全て出力する
@@ -149,6 +154,8 @@ namespace usb
                 }
             }
         }
+
+        printk("\n");
 
         RequestKeyCodeViaIntEP();
     }
