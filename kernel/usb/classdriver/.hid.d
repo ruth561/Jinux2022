@@ -1,7 +1,9 @@
-usb/classdriver/hid.o: usb/classdriver/hid.cpp usb/classdriver/hid.hpp \
-  usb/classdriver/../device.hpp \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/new \
+usb/classdriver/hid.o: usb/classdriver/hid.cpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__config \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
+  usb/classdriver/hid.hpp usb/classdriver/../device.hpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/new \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/exception \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/version \
@@ -21,8 +23,6 @@ usb/classdriver/hid.o: usb/classdriver/hid.cpp usb/classdriver/hid.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/algorithm \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/utility \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__debug \

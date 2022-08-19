@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "hid.hpp"
 #include "../../logging.hpp"
 #include "../../timer.hpp"
@@ -51,6 +53,52 @@ namespace
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" // 60~69 全てFキー
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" // 70~79 
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";// 80~89 
+    
+    // uint8_t[8]の中身のデータが等しいならtrue、等しくないならfalseを返す
+    bool IsSameKeyStroke(uint8_t *prev_keys, uint8_t *new_keys)
+    {
+        for (int i = 0; i < 8; i++) {
+            if (prev_keys[i] != new_keys[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // prev_keysにkeyが含まれていればtrue、含まれていなければfalseを返す
+    bool IsKeyInPrevKeys(uint8_t key, uint8_t *prev_keys)
+    {
+        for (int i = 2; i < 8; i++) {
+            if (key == prev_keys[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // キーを出力する
+    void PrintKeys(uint8_t *keys) 
+    {
+        ModifierKey modifier_key{keys[0]};
+        char key[2] = {0, 0};
+
+        if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
+            // 入力を検知した文字を全て出力する
+            for (int i = 2; i < 8; i++) {
+                if (keys[i] < sizeof(kKeyCordShift)) {
+                    key[0] = kKeyCordShift[keys[i]];
+                    printk(key);
+                }
+            }
+        } else {
+            for (int i = 2; i < 8; i++) {
+                if (keys[i] < sizeof(kKeyCord)) {
+                    key[0] = kKeyCord[keys[i]];
+                    printk(key);
+                }
+            }
+        }
+    }
 }
 
 namespace usb
@@ -119,44 +167,29 @@ namespace usb
         // TODO:
         // キーボードを押したときのデータが連続で来ているかどうか、一回手を話したかの判定が難しい
         // 現状、素早い入力への対応はできているが、たまに連続したデータが見られるようになった。
-        uint8_t *data;
-        data = reinterpret_cast<uint8_t *>(buf);
-        /* logger->info("BUF: %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx, %02hhx\n", 
-            data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]); */
-        
-        ModifierKey modifier_key{data[0]};
-        char key[2] = {0, 0};
-        /* uint32_t current_tick = timer_manager->CurrentTick(); 
-        if (current_tick < last_tick_ + key_stroke_interval_) {
-            // logger->info("Current Tick: %d, Last Tick: %d\n", current_tick, last_tick_);
-            // 最後に入力検知をしてから十分な時間が立っていなければ出力しない
+
+        uint8_t *keys = reinterpret_cast<uint8_t *>(buf); //　コントローラから受け取ったキー入力データ
+        uint8_t new_keys[8]; // 差分を意識して、新しく押されたキーのデータ
+
+        if (IsSameKeyStroke(prev_keys_, keys)) { // 入力内容が全く同じなら
+            PrintKeys(keys); // 入力文字を処理するコード
             RequestKeyCodeViaIntEP();
             return;
         }
-        last_tick_ = current_tick; // キー入力の時間を更新 */
-        for (int i = 0; i < 8; i++) {
-            printk("%02x ", data[i]);
-        }
-
-        if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
-            // 入力を検知した文字を全て出力する
-            for (int i = 2; i < 8; i++) {
-                if (data[i] < sizeof(kKeyCordShift)) {
-                    key[0] = kKeyCordShift[data[i]];
-                    printk(key);
-                }
-            }
-        } else {
-            for (int i = 2; i < 8; i++) {
-                if (data[i] < sizeof(kKeyCord)) {
-                    key[0] = kKeyCord[data[i]];
-                    printk(key);
-                }
+        
+        // 入力内容が異なる場合
+        new_keys[0] = keys[0]; // Modifier Keyはそのまま
+        new_keys[1] = 0;
+        for (int i = 2; i < 8; i++) {
+            if (IsKeyInPrevKeys(keys[i], prev_keys_)) {
+                new_keys[i] = 0;
+            } else {
+                new_keys[i] = keys[i];
             }
         }
-
-        printk("\n");
-
+    
+        PrintKeys(new_keys);
+        memcpy(prev_keys_, keys, sizeof(prev_keys_)); // 出力したキーデータをprev_keys_にコピーする
         RequestKeyCodeViaIntEP();
     }
 

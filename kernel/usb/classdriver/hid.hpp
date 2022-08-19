@@ -13,7 +13,7 @@ namespace usb
     {
     public:
         HIDKeyboardDriver(Device *dev, uint8_t interface_number) : 
-            dev_{dev}, interface_number_{interface_number} {}
+            dev_{dev}, interface_number_{interface_number}, prev_keys_{} {}
         
         // デバイスがConfiguredになったらUSBデバイスドライバから呼び出される
         void Run() override;
@@ -44,6 +44,8 @@ namespace usb
 
         uint32_t last_tick_; // キー入力が最後に検知されたときのタイマーのチック数
         uint32_t key_stroke_interval_; // キー入力の検知間隔（Ticks）
+
+        uint8_t prev_keys_[8]; // 直前のキー入力の値
 
 
         char buf_[256]; // データの受け渡しに使われるバッファ
