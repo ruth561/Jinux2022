@@ -49,8 +49,8 @@ main.o: main.cpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
-  message.hpp task.hpp syscall.hpp msr.hpp pci.hpp usb/xhci/xhci.hpp \
-  usb/xhci/ring.hpp usb/xhci/trb.hpp usb/xhci/registers.hpp \
+  message.hpp usb/xhci/trb.hpp task.hpp syscall.hpp msr.hpp pci.hpp \
+  usb/xhci/xhci.hpp usb/xhci/ring.hpp usb/xhci/registers.hpp \
   usb/xhci/context.hpp usb/xhci/../memory.hpp \
   usb/xhci/../../memory_manager.hpp usb/xhci/devmgr.hpp \
   usb/xhci/device.hpp usb/xhci/../endpoint.hpp \
@@ -61,4 +61,5 @@ main.o: main.cpp \
   usb/xhci/../classdriver/../setupdata.hpp \
   usb/xhci/../classdriver/hid.hpp usb/xhci/../classdriver/../device.hpp \
   usb/xhci/../../logging.hpp usb/xhci/port.hpp usb/xhci/../../pci.hpp \
-  usb/xhci/../../task.hpp
+  usb/xhci/../../task.hpp rtl8139/rtl8139.hpp rtl8139/../pci.hpp \
+  rtl8139/../logging.hpp

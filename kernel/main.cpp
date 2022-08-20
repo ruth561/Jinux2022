@@ -21,6 +21,7 @@
 #include "syscall.hpp"
 #include "pci.hpp"
 #include "usb/xhci/xhci.hpp"
+#include "rtl8139/rtl8139.hpp"
 
 
 void Halt(void);
@@ -67,15 +68,16 @@ extern "C" void KernelMainNewStack(
 
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
-    logger->set_level(logging::kERROR); // 出力減らす
+    
+    logger->set_level(logging::kDEBUG); // 出力減らす
+    rtl8139::Initialize(); // RTL8139の初期化
+
+    Halt();
+
+
+
 
     usb::xhci::Initialize(); // xHCの初期化 
-
-    /* while (true) {
-        usb::xhci::ProcessEvents(); 
-    } */
-
-    // logger->set_level(logging::kERROR); // 例外ハンドラ内でsvprintfを使用しないためにフィルターを強める
 
     // logger->set_level(logging::kINFO); // 文字出力を制限
     /* task_manager->NewTask()

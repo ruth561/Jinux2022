@@ -24,6 +24,8 @@ namespace pci
         uint8_t bus;
         uint8_t device;
         uint8_t function;
+        uint16_t vendor_id;
+        uint16_t device_id;
         uint8_t base_class;
         uint8_t sub_class;
         uint8_t interface;

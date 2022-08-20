@@ -162,7 +162,7 @@ void ScanPCIBus()
                     uint8_t sub_class = ReadSubClass(bus, dev, func);
                     uint8_t interface = ReadInterface(bus, dev, func);
                     devices.push_back(Device{ // deviceのリストに追加
-                        bus, dev, func, base_class, sub_class, interface, header_type
+                        bus, dev, func, vendor_id, device_id, base_class, sub_class, interface, header_type
                     });
                     ScanCapabilityList(&devices.back()); // このデバイスのCapabilityListを走査
                 }
