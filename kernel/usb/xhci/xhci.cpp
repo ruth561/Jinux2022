@@ -61,7 +61,6 @@ namespace
         // WakeUpされた時は、タスクのResvMessageに受け取ったイベントの情報を記した
         // Messageが届いているので、そこからWakeupした理由を得る。
         // メッセージは戻り値に渡してあげる。
-        printk("Task.NumMessages: %d\n", current_task->NumMessages());
         Message msg = current_task->ReceiveMessage();
         if (msg.type != Message::Type::kInterruptXHCI) {
             if (msg.type == Message::Type::kNullMessage) {
@@ -92,7 +91,6 @@ namespace
     void InitUSBDevTask(uint64_t id, int64_t _)
     {
         while (true) {
-            printk("WHILE!!!\n");
             if (initializing_ports.empty()) { // 初期化するポートがない時
                 WaitEvent();
                 continue;
@@ -100,6 +98,7 @@ namespace
             uint8_t port_num = initializing_ports.front();
             Port *port = xhc->PortAt(port_num);
 
+            printk("[USB] ");
             printk("PORT%d WILL BE INITIALIZED.\n", port_num);
             if (xhc->ResetPort(port)) {
                 logger->error("Error On Resetting Port%d.\n", port_num);
@@ -113,6 +112,7 @@ namespace
                 continue;
             }
 
+            printk("[USB] ");
             printk("PORT%d RESET COMPLETED.\n", port_num);
             if (xhc->EnableSlot(port)) {
                 PostProcessing();
@@ -126,6 +126,7 @@ namespace
             }
 
             uint8_t slot_num = port->Slot();
+            printk("[USB] ");
             printk("SLOT%d ENABLED FOR PORT%d\n", slot_num, port_num);
             xhc->slot_to_port_[slot_num] = port_num;
             if (xhc->AddressDevice(port_num, slot_num)) {
@@ -139,6 +140,7 @@ namespace
                 continue;
             }
 
+            printk("[USB] ");
             printk("ADDRESS DEVICE ON PORT%d\n", port_num);
             Device *dev = xhc->devmgr_.FindBySlot(slot_num);
             if (dev->BeforeInitialize()) {
@@ -152,6 +154,7 @@ namespace
                 continue;
             }
 
+            printk("[USB] ");
             printk("MAX PACKET SIZE IS %d.\n", dev->MaxPacketSize());
             if (xhc->ReConfigureDefaultControlPipe(dev)) {
                 PostProcessing();
@@ -164,18 +167,21 @@ namespace
                 continue;
             }
 
+            printk("[USB] ");
             printk("RECONFIGURE EP0.\n");
             if (dev->StartInitialize()) {
                 PostProcessing();
                 continue;
             }
 
+            printk("[USB] ");
             if (!WaitEvent()) {
                 logger->error("Failed To Initialize Device Attached To Port%d.\n", port_num);
                 PostProcessing();
                 continue;
             }
 
+            printk("[USB] ");
             printk("DEVICE CONFIGURED!!\n");
             if (xhc->ConfigureEndpoints(dev)) {
                 PostProcessing();
@@ -188,9 +194,11 @@ namespace
                 continue;
             } 
 
+            printk("[USB] ");
             dev->OnEndpointsConfigured();
             printk("PORT%d (SLOT%d) REACHED TO CONFIGURED STATE.\n", port_num, slot_num);
-            
+            printk("\n");
+
             PostProcessing();
         }
 
@@ -580,7 +588,7 @@ namespace usb::xhci
         if (port->IsConnectStatusChanged()) { // ポート接続の変化
             if (port->IsConnected()) {
                 // TODO: ここが立て続けに２回呼ばれた時、意図しない動作が起こる可能性があるので注意したい
-                logger->info("[+] Device Attached To Port%hhd.\n", port->Number());
+                printk("\n[+] USB DEVICE ATTACHED TO PORT%02hhd\n", port->Number());
                 if (std::find(initializing_ports.begin(), initializing_ports.end(), port->Number()) == initializing_ports.end()) { // 配列に含まれていない場合
                     initializing_ports.push_back(port->Number());
                 }
@@ -591,7 +599,7 @@ namespace usb::xhci
                     task_manager->Wakeup(InitUSBDevTaskID);
                 }
             } else {
-                logger->info("[+] Device Detached From Port%hhd\n", port->Number());
+                printk("\n[+] USB DEVICE ATTACHED TO PORT%02hhd\n", port->Number());
                 // ポートにスロットが割り当てられていれば、そのスロットを無効にする
                 for (int i = 1; i <= device_size_; i++) {
                     if (slot_to_port_[i] == port->Number()) {
@@ -770,7 +778,7 @@ namespace usb::xhci
             linear_address.data += kBytesPerFrame;
             SetIDMapEntry(linear_address);
         }
-        printk("SetIDMapEntry: 0x%lx\n", linear_address.data);
+        logger->info("SetIDMapEntry: 0x%lx\n", linear_address.data);
 
         xhc = new Controller(mmio_base);
         xhc->Initializer();

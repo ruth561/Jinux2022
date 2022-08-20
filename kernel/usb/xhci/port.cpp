@@ -55,9 +55,9 @@ namespace usb::xhci
             portsc.bits.connect_status_change = 1;
             port_reg_set_->PORTSC.data[0] = portsc.data[0];
 
-            printk("[Port::Reset()] Port%02hhd Start Reseting...\n", Number());
+            // printk("[Port::Reset()] Port%02hhd Start Reseting...\n", Number());
             while (port_reg_set_->PORTSC.bits.port_reset);
-            printk("[Port::Reset()] Port%02hhd Finish Reseting...\n", Number());
+            // printk("[Port::Reset()] Port%02hhd Finish Reseting...\n", Number());
 
             return 0;
         }

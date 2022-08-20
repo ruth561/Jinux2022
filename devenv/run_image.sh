@@ -21,8 +21,10 @@ qemu-system-x86_64 \
     -drive if=pflash,format=raw,file=$DEVENV_DIR/OVMF_VARS.fd \
     -drive if=ide,index=0,media=disk,format=raw,file=$DISK_IMG \
     -device nec-usb-xhci,id=xhci \
-    -device usb-mouse -device usb-kbd \
-    -monitor stdio -gdb tcp::1234 \
+    -device usb-mouse -device usb-kbd,id=kbd \
+    -monitor stdio \
+    -nic user,model=rtl8139 \
+    -gdb tcp::1234 \
     $QEMU_OPTS
 
 # -S: 実行前に止まってくれる引数
