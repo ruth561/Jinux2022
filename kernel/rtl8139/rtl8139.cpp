@@ -45,7 +45,22 @@ namespace rtl8139
         opt_->command_register.bits.reset = 1;
         while (opt_->command_register.bits.reset) continue;
         logger->info("RTL8139 Reset Completed.\n");
-        
+        logger->info("Command Register: %hhx\n", opt_->command_register.data);
+
+        rx_buffer_ = malloc(8192 + 16);
+        if (reinterpret_cast<uint64_t>(rx_buffer_) > 0xfffffffful) {
+            logger->error("[RTL8139] Rx Buffer Pointer Is Over 32bit Address.\n");
+            return -1;
+        }
+        logger->debug("Rx Buffer: %p\n", rx_buffer_);
+        opt_->receive_buffer_start_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(rx_buffer_));
+
+        logger->debug("Receive Configuration Register: %x\n", opt_->receive_configuration_register.data);
+        opt_->receive_configuration_register.bits.wrap = 0; // 通常のリングバッファ（オーバーフローさせない）
+        opt_->receive_configuration_register.bits.rx_buffer_length = 0; // リングの大きさは8192+16bytes
+        logger->debug("Receive Configuration Register: %x\n", opt_->receive_configuration_register.data);
+
+
 
 
         return 0;

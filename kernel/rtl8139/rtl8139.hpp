@@ -1,5 +1,6 @@
 #pragma once 
 
+#include <cstdlib>
 
 #include "../pci.hpp"
 #include "../logging.hpp"
@@ -18,6 +19,7 @@ namespace rtl8139
         const uint32_t mmio_base_;
 
         OperationalRegister *opt_;
+        void *rx_buffer_;
     };
 
     void Initialize();

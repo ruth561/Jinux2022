@@ -1,6 +1,9 @@
-rtl8139/rtl8139.o: rtl8139/rtl8139.cpp rtl8139/rtl8139.hpp rtl8139/../pci.hpp \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/vector \
+rtl8139/rtl8139.o: rtl8139/rtl8139.cpp rtl8139/rtl8139.hpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__config \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
+  rtl8139/../pci.hpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/vector \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/wchar.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
@@ -20,8 +23,6 @@ rtl8139/rtl8139.o: rtl8139/rtl8139.cpp rtl8139/rtl8139.hpp rtl8139/../pci.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/memory \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/typeinfo \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/exception \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/new \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/iterator \

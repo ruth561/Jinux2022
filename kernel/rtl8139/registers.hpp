@@ -20,6 +20,32 @@ namespace rtl8139
         } __attribute__((packed)) bits;
     } __attribute__((packed));
 
+    union ReceiveConfigurationRegister 
+    {
+        uint32_t data;
+        struct {
+            volatile uint32_t accept_all_packets: 1;
+            volatile uint32_t accept_physical_match_packets: 1;
+            volatile uint32_t accept_multicast_packets: 1;
+            volatile uint32_t accept_broadcast_packets: 1;
+            volatile uint32_t accept_runt: 1;
+            volatile uint32_t accept_error_packet: 1;
+            uint32_t : 1;
+            volatile uint32_t wrap: 1;
+
+            volatile uint32_t max_dma_burst_size: 3;
+            volatile uint32_t rx_buffer_length: 2; // 00: 8k+16(bytes)
+            volatile uint32_t rx_fifo_threshold: 3;
+
+            volatile uint32_t rer8: 1;
+            volatile uint32_t multiple_early_interrupt_select: 1;
+            uint32_t : 6;
+
+            volatile uint32_t early_rx_threshold_bits: 4;
+            uint32_t : 4;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
+
     union CONFIG1
     {
         volatile uint8_t data;
@@ -49,7 +75,7 @@ namespace rtl8139
         uint16_t interrupt_mask_register; // 3ch~3dh
         uint16_t interrupt_status_register; // 3eh~3fh
         uint32_t transmit_configuration_register; // 40h~43h
-        uint32_t receive_configuration_register; // 44h~47h
+        ReceiveConfigurationRegister receive_configuration_register; // 44h~47h
         uint32_t timer_count_register; // 48h~4bh
         uint32_t missed_packet_counter; // 4ch~4fh
         uint8_t command_9346; // 50h
