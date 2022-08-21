@@ -41,6 +41,12 @@ namespace rtl8139
         logger->info("CONFIG1: %hhx\n", opt_->config1.data);
         opt_->config1.data = 0; // power on
 
+        logger->info("Command Register: %hhx\n", opt_->command_register.data);
+        opt_->command_register.bits.reset = 1;
+        while (opt_->command_register.bits.reset) continue;
+        logger->info("RTL8139 Reset Completed.\n");
+        
+
 
         return 0;
     }
