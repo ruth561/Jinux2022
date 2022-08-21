@@ -22,6 +22,7 @@
 #include "pci.hpp"
 #include "usb/xhci/xhci.hpp"
 #include "rtl8139/rtl8139.hpp"
+#include "ioapic.hpp"
 
 
 void Halt(void);
@@ -62,6 +63,8 @@ extern "C" void KernelMainNewStack(
 
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
     InitializeLocalAPICTimer(); // タイマの設定
+    ioapic::Initialize();
+
     InitializeTask(); // マルチタスクの開始
     Task *main_task = task_manager->CurrentTask();
     InitializeSyscall(); // システムコールを使用可能にする

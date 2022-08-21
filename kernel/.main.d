@@ -62,4 +62,4 @@ main.o: main.cpp \
   usb/xhci/../classdriver/hid.hpp usb/xhci/../classdriver/../device.hpp \
   usb/xhci/../../logging.hpp usb/xhci/port.hpp usb/xhci/../../pci.hpp \
   usb/xhci/../../task.hpp rtl8139/rtl8139.hpp rtl8139/../pci.hpp \
-  rtl8139/../logging.hpp
+  rtl8139/../logging.hpp rtl8139/registers.hpp ioapic.hpp
