@@ -46,6 +46,44 @@ namespace rtl8139
         } __attribute__((packed)) bits;
     } __attribute__((packed));
 
+    union InterruptMaskRegister 
+    {
+        // １がセットされているもののみ割り込みが発生される
+        uint16_t data;
+        struct {
+            volatile uint16_t receive_ok_interupt: 1;
+            volatile uint16_t receive_error_interrupt: 1;
+            volatile uint16_t transmit_ok_interupt: 1;
+            volatile uint16_t transmit_error_interupt: 1;
+            volatile uint16_t rx_buffer_overflow_interrupt: 1;
+            volatile uint16_t packet_underrun_link_change_interupt: 1;
+            volatile uint16_t rx_fifo_overflow_interrupt: 1;
+            uint16_t : 6;
+            volatile uint16_t cable_length_change_interupt: 1;
+            volatile uint16_t timeout_interupt: 1;
+            volatile uint16_t system_error_interupt: 1;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
+
+    union InterruptStatusRegister 
+    {
+        // 割り込みがどの種類のものかを示す
+        uint16_t data;
+        struct {
+            volatile uint16_t receive_ok: 1;
+            volatile uint16_t receive_error: 1;
+            volatile uint16_t transmit_ok: 1;
+            volatile uint16_t transmit_error: 1;
+            volatile uint16_t rx_buffer_overflow: 1;
+            volatile uint16_t packet_underrun_link_change: 1;
+            volatile uint16_t rx_fifo_overflow: 1;
+            uint16_t : 6;
+            volatile uint16_t cable_length_change: 1;
+            volatile uint16_t timeout: 1;
+            volatile uint16_t system_error: 1;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
+    
     union CONFIG1
     {
         volatile uint8_t data;
@@ -72,8 +110,8 @@ namespace rtl8139
         CommandRegister command_register; // 37h
         uint16_t current_address_of_packet_read; // 38h~39h
         uint16_t current_buffer_address; // 3ah~3bh
-        uint16_t interrupt_mask_register; // 3ch~3dh
-        uint16_t interrupt_status_register; // 3eh~3fh
+        InterruptMaskRegister interrupt_mask_register; // 3ch~3dh
+        InterruptStatusRegister interrupt_status_register; // 3eh~3fh
         uint32_t transmit_configuration_register; // 40h~43h
         ReceiveConfigurationRegister receive_configuration_register; // 44h~47h
         uint32_t timer_count_register; // 48h~4bh

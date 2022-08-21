@@ -54,9 +54,19 @@ namespace rtl8139
             return -1;
         }
         memset(rx_buffer_, 0, rx_buffer_size);
-        
         logger->debug("Rx Buffer: %p\n", rx_buffer_);
         opt_->receive_buffer_start_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(rx_buffer_));
+
+        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
+        opt_->interrupt_mask_register.bits.receive_ok_interupt = true;
+        opt_->interrupt_mask_register.bits.receive_error_interrupt = true;
+        opt_->interrupt_mask_register.bits.transmit_ok_interupt = true;
+        opt_->interrupt_mask_register.bits.transmit_error_interupt = true;
+        opt_->interrupt_mask_register.bits.rx_buffer_overflow_interrupt = true;
+        opt_->interrupt_mask_register.bits.rx_fifo_overflow_interrupt = true;
+        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
+
+
 
         logger->debug("Receive Configuration Register: %x\n", opt_->receive_configuration_register.data);
         opt_->receive_configuration_register.bits.wrap = 0; // 通常のリングバッファ（オーバーフローさせない）
