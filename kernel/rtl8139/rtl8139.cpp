@@ -29,9 +29,42 @@ namespace pci
 
 namespace rtl8139
 {
+    Controller *rtl8139;
+
+    Controller::Controller(uint32_t mmio_base) : 
+        mmio_base_{mmio_base}, 
+        opt_{reinterpret_cast<OperationalRegister *>(mmio_base)} {}
+
+    int Controller::Initialize()
+    {
+        logger->info("MAC address: %012lx\n", opt_->mac_address);
+
+        return 0;
+    }
 
     void Initialize()
     {
-        pci::Device *rtl8139 = pci::FindRTL8139();
+        pci::Device *rtl8139_dev = pci::FindRTL8139();
+        if (rtl8139_dev == nullptr) {
+            return;
+        }
+
+        uint32_t data = pci::ConfigRead32(rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 4);
+        logger->debug("Command: 0x%hx\n", data);
+        logger->debug("Status: 0x%hx\n", data >> 16);
+        pci::ConfigWrite32(data | (1 << 1), rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 4); // DMAの許可
+
+        data = pci::ConfigRead32(rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 0x14);
+        logger->debug("Memory Address: 0x%x\n", data);
+        if (data & 1) { // Bit０が１の時
+            logger->error("Cannot Access To Memory Mapped Registers.\n");
+            return;
+        }
+        uint32_t mmio_base = data & ~0xffu;
+        logger->debug("mmio_base: 0x%x\n", mmio_base);
+
+        rtl8139 = new Controller{mmio_base};
+        rtl8139->Initialize();
+
     }
 }

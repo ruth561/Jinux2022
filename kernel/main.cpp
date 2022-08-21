@@ -68,12 +68,12 @@ extern "C" void KernelMainNewStack(
 
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
-    
+
     logger->set_level(logging::kDEBUG); // 出力減らす
     rtl8139::Initialize(); // RTL8139の初期化
 
     Halt();
-
+ 
 
 
 

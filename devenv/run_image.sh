@@ -23,7 +23,7 @@ qemu-system-x86_64 \
     -device nec-usb-xhci,id=xhci \
     -device usb-mouse -device usb-kbd,id=kbd \
     -monitor stdio \
-    -nic user,model=rtl8139 \
+    -nic user,model=rtl8139,mac=12:34:56:78:9a:bc \
     -gdb tcp::1234 \
     $QEMU_OPTS
 
