@@ -33,11 +33,14 @@ namespace rtl8139
 
     Controller::Controller(uint32_t mmio_base) : 
         mmio_base_{mmio_base}, 
-        opt_{reinterpret_cast<OperationalRegister *>(mmio_base)} {}
+        opt_{reinterpret_cast<OperationalRegister *>(mmio_base_)} {}
 
     int Controller::Initialize()
     {
         logger->info("MAC address: %012lx\n", opt_->mac_address);
+        logger->info("CONFIG1: %hhx\n", opt_->config1.data);
+        opt_->config1.data = 0; // power on
+
 
         return 0;
     }
