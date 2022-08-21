@@ -2,6 +2,8 @@ rtl8139/rtl8139.o: rtl8139/rtl8139.cpp rtl8139/rtl8139.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
   rtl8139/../pci.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/vector \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
@@ -13,8 +15,6 @@ rtl8139/rtl8139.o: rtl8139/rtl8139.cpp rtl8139/rtl8139.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/type_traits \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/utility \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
