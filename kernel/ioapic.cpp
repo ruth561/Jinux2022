@@ -26,18 +26,84 @@ namespace ioapic
         return *io_window;
     }
 
+    void WriteRedirectionTable(uint8_t ent_num, RedirectionTableEntry entry)
+    {
+        Write(IOAPICREDTBL(ent_num), entry.data[0]);     // 下位32bit
+        Write(IOAPICREDTBL(ent_num) + 1, entry.data[1]); // 上位32bit
+    }
+
+    RedirectionTableEntry ReadRedirectionTable(uint8_t ent_num)
+    {
+        RedirectionTableEntry entry;
+        entry.data[0] = Read(IOAPICREDTBL(ent_num));
+        entry.data[1] = Read(IOAPICREDTBL(ent_num) + 1);
+        return entry;
+    }
+
     void Initialize()
     {
         logging::LoggingLevel current_level = logger->current_level();
         logger->set_level(logging::kDEBUG);
-        logger->debug("IO APIC ID:          %08x\n", Read(0));
-        logger->debug("IO APIC VERSION:     %08x\n", Read(1));
-        logger->debug("IO APIC ARBITRATION: %08x\n", Read(2));
+        logger->debug("IO APIC ID:          %08x\n", Read(IOAPICID));
+        logger->debug("IO APIC VERSION:     %08x\n", Read(IOAPICVER));
+        logger->debug("IO APIC ARBITRATION: %08x\n", Read(IOAPICARB));
 
+        RedirectionTableEntry entry;
+        entry.data[0] = 0;
+        entry.data[1] = 0;
+        for (uint8_t i = 16; i < 24; i++) {
+            entry.bits.interrupt_vector = InterruptVector::kLegacyInterruptFromIOAPIC;
+            // 割り込みは物理的な０番目のプロセッサに運ばれる
+            entry.bits.destination_mode = 0;
+            entry.bits.destination_field = 0; 
+
+            entry.bits.delivery_mode = 0; // fixed mode
+            entry.bits.interrupt_mask = false; // not masked 
+
+            entry.bits.interrupt_input_pin_polarity = true; // asserted when low
+            entry.bits.trigger_mode = false; // edge mode
+
+            WriteRedirectionTable(i, entry);
+            entry = ReadRedirectionTable(i);
+            logger->debug("REDIRECTION TABLE %02d: %08x %08x\n", i, entry.data[0], entry.data[1]);
+        }
+        for (uint8_t i = 0; i < 2; i++) {
+            entry.bits.interrupt_vector = InterruptVector::kLegacyInterruptFromIOAPIC;
+            // 割り込みは物理的な０番目のプロセッサに運ばれる
+            entry.bits.destination_mode = 0;
+            entry.bits.destination_field = 0; 
+
+            entry.bits.delivery_mode = 0; // fixed mode
+            entry.bits.interrupt_mask = false; // not masked 
+
+            entry.bits.interrupt_input_pin_polarity = false; // asserted when high
+            entry.bits.trigger_mode = false; // edge mode
+            
+            WriteRedirectionTable(i, entry);
+            entry = ReadRedirectionTable(i);
+            logger->debug("REDIRECTION TABLE %02d: %08x %08x\n", i, entry.data[0], entry.data[1]);
+        }
+        for (uint8_t i = 11; i <12; i++) {
+            entry.bits.interrupt_vector = InterruptVector::kLegacyInterruptFromIOAPIC;
+            // 割り込みは物理的な０番目のプロセッサに運ばれる
+            entry.bits.destination_mode = 0;
+            entry.bits.destination_field = 0; 
+
+            entry.bits.delivery_mode = 0; // fixed mode
+            entry.bits.interrupt_mask = false; // not masked 
+
+            entry.bits.interrupt_input_pin_polarity = false; // asserted when high
+            entry.bits.trigger_mode = false; // edge mode
+            
+            WriteRedirectionTable(i, entry);
+            entry = ReadRedirectionTable(i);
+            logger->debug("REDIRECTION TABLE %02d: %08x %08x\n", i, entry.data[0], entry.data[1]);
+        }
 
 
 
 
         logger->set_level(current_level);
+        // Halt();
     }
 }

@@ -170,6 +170,14 @@ void IntHandlerXHCI(InterruptFrame *frame)
     NotifyEndOfInterrupt();
 }
 
+// レガシー割り込みハンドラ
+__attribute__((interrupt)) 
+void IntHandlerLegacyInterrupt(InterruptFrame *frame) 
+{
+    printk("[!-- INTERRUPT --!] REGACY INTERRUPT!\n");
+    NotifyEndOfInterrupt();
+}
+
 // エラーコードありの例外ハンドラ
 #define FaultHandlerWithError(fault_name) \
     __attribute__((interrupt)) \
@@ -228,6 +236,9 @@ void SetupInterruptDescriptorTable()
 
     logger->info("Setting IDT[%02xh] kLAPICTimer\n", InterruptVector::kLAPICTimer);
     SetIDTEntry(InterruptVector::kLAPICTimer, reinterpret_cast<uintptr_t>(IntHandlerLAPICTimer), cs, 14, kISTForTimer);
+
+    logger->info("Setting IDT[%02xh] kLegacyInterruptFromIOAPIC\n", InterruptVector::kLegacyInterruptFromIOAPIC);
+    SetIDTEntry(InterruptVector::kLegacyInterruptFromIOAPIC, reinterpret_cast<uintptr_t>(IntHandlerLegacyInterrupt), cs, 14);
 
     auto set_idt_entry = [](int vector_number, auto handler) {
         idt[vector_number].SetOffset(reinterpret_cast<uintptr_t>(handler));

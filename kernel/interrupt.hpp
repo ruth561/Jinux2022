@@ -19,6 +19,7 @@ enum InterruptVector
     kPageFault = 14,
     kXHCI = 0x40, 
     kLAPICTimer = 0x41,
+    kLegacyInterruptFromIOAPIC = 0x42,
 };
 
 // 各割り込みが用いるISTの値を定義

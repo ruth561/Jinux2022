@@ -38,13 +38,13 @@ interrupt.o: interrupt.cpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
-  message.hpp task.hpp logging.hpp memory_manager.hpp memory_map.hpp \
-  run_application.hpp paging.hpp segment.hpp x86_descriptor.hpp elf.hpp \
+  message.hpp usb/xhci/trb.hpp task.hpp logging.hpp memory_manager.hpp \
+  memory_map.hpp run_application.hpp paging.hpp segment.hpp \
+  x86_descriptor.hpp elf.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/elf.h usb/xhci/xhci.hpp \
-  usb/xhci/ring.hpp usb/xhci/trb.hpp usb/xhci/registers.hpp \
-  usb/xhci/context.hpp usb/xhci/../memory.hpp \
-  usb/xhci/../../memory_manager.hpp usb/xhci/devmgr.hpp \
-  usb/xhci/device.hpp usb/xhci/../endpoint.hpp \
+  usb/xhci/ring.hpp usb/xhci/registers.hpp usb/xhci/context.hpp \
+  usb/xhci/../memory.hpp usb/xhci/../../memory_manager.hpp \
+  usb/xhci/devmgr.hpp usb/xhci/device.hpp usb/xhci/../endpoint.hpp \
   usb/xhci/../xhci/context.hpp usb/xhci/../device.hpp \
   usb/xhci/../setupdata.hpp usb/xhci/../descriptor.hpp \
   usb/xhci/../classdriver/base.hpp \

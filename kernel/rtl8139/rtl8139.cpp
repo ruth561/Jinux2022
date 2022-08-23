@@ -58,12 +58,17 @@ namespace rtl8139
         opt_->receive_buffer_start_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(rx_buffer_));
 
         logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
+        // 全ての割り込みを許可する
         opt_->interrupt_mask_register.bits.receive_ok_interupt = true;
         opt_->interrupt_mask_register.bits.receive_error_interrupt = true;
         opt_->interrupt_mask_register.bits.transmit_ok_interupt = true;
         opt_->interrupt_mask_register.bits.transmit_error_interupt = true;
         opt_->interrupt_mask_register.bits.rx_buffer_overflow_interrupt = true;
         opt_->interrupt_mask_register.bits.rx_fifo_overflow_interrupt = true;
+        opt_->interrupt_mask_register.bits.packet_underrun_link_change_interupt = true;
+        opt_->interrupt_mask_register.bits.cable_length_change_interupt = true;
+        opt_->interrupt_mask_register.bits.timeout_interupt = true;
+        opt_->interrupt_mask_register.bits.system_error_interupt = true;
         logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
 
 
