@@ -47,15 +47,16 @@ namespace rtl8139
         logger->info("RTL8139 Reset Completed.\n");
         logger->info("Command Register: %hhx\n", opt_->command_register.data);
 
+        // Receive用のバッファを確保する
         size_t rx_buffer_size = 8192 + 16;
-        rx_buffer_ = malloc(rx_buffer_size);
-        if (reinterpret_cast<uint64_t>(rx_buffer_) > 0xfffffffful) {
+        rx_buffer_ = reinterpret_cast<uint64_t>(malloc(rx_buffer_size));
+        if (rx_buffer_ > 0xfffffffful) { // バッファは32bitメモリ空間に存在していなければならない
             logger->error("[RTL8139] Rx Buffer Pointer Is Over 32bit Address.\n");
             return -1;
         }
-        memset(rx_buffer_, 0, rx_buffer_size);
+        memset(reinterpret_cast<void *>(rx_buffer_), 0, rx_buffer_size);
         logger->debug("Rx Buffer: %p\n", rx_buffer_);
-        opt_->receive_buffer_start_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(rx_buffer_));
+        opt_->receive_buffer_start_address = static_cast<uint32_t>(rx_buffer_);
 
         logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
         // 全ての割り込みを許可する
@@ -78,6 +79,7 @@ namespace rtl8139
         opt_->receive_configuration_register.bits.rx_buffer_length = 0; // リングの大きさは8192+16bytes
         logger->debug("Receive Configuration Register: %x\n", opt_->receive_configuration_register.data);
 
+        // opt_->current_address_of_packet_read = 0; // リングバッファへのポインタを０で初期化する
         opt_->command_register.bits.receiver_enable = 1; // Receiveを開始する
 
 
@@ -109,5 +111,27 @@ namespace rtl8139
         rtl8139 = new Controller{mmio_base};
         rtl8139->Initialize();
 
+        while (1) {
+            rtl8139->ReceivePacket();
+        }
+
     }
+
+    void Controller::ReceivePacket()
+    {
+        if (opt_->current_buffer_address == opt_->current_address_of_packet_read) {
+            // バッファに未読のパケットがない場合
+            return;
+        }
+        Packet *packet = reinterpret_cast<Packet *>(rx_buffer_ + opt_->current_address_of_packet_read);
+        printk("Header: %04hx\n", packet->header.data);
+        printk("Length: %d\n", packet->length);
+        printk("Data:   ");
+        for (int i = 0; i < packet->length; i++) {
+            printk("%02hhx ", packet->data[i]);
+        }
+
+        opt_->current_address_of_packet_read = opt_->current_buffer_address;
+    }
+
 }

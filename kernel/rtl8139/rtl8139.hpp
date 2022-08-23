@@ -6,6 +6,7 @@
 #include "../pci.hpp"
 #include "../logging.hpp"
 #include "registers.hpp"
+#include "packet.hpp"
 
 namespace rtl8139
 {
@@ -16,11 +17,14 @@ namespace rtl8139
 
         int Initialize();
 
+        void ReceivePacket();
+
     private:
         const uint32_t mmio_base_;
 
         OperationalRegister *opt_;
-        void *rx_buffer_;
+        
+        uint64_t rx_buffer_;
     };
 
     void Initialize();
