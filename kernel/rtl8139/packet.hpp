@@ -36,6 +36,8 @@ namespace rtl8139
                    header.bits.invalid_symbol_error;
         }
     };
+
+    void PacketDump(Packet *packet);
     
 
 

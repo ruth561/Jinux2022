@@ -102,18 +102,16 @@ namespace rtl8139
             return;
         }
 
-        uint16_t packet_size = packet->length - 4; // 先頭４バイト分はいらない
-        printk("Packet:   ");
-        for (int i = 0; i < packet_size; i++) {
-            printk("%02hhx ", packet->data[i]);
-        }
-        printk("\n");
+        // とりあえずパケットの出力をしておく
+        PacketDump(packet);
 
         if (rx_offset_ + packet->length > rx_buffer_size_) {
             // リングの終端に来た場合
         }
 
         // headerの4byte分多めにとり4byteでアラインメント
+        // 4byte分多めにとっているのは、パケットの後ろに4byteのデータが付属しているから？
+        // CRCなるものが付属しているらしく、後で調べてみよう、、。
         rx_offset_ = (rx_offset_ + packet->length + 4 + 3) & ~3;
 
         // CAPRには、オフセットから0x10引いた値を入れることになっている
