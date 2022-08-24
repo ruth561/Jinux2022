@@ -27,6 +27,14 @@ namespace rtl8139
         PacketHeader header;
         uint16_t length;
         uint8_t data[];
+
+        bool HasError() {
+            return header.bits.frame_alignment_error | 
+                   header.bits.crc_error |
+                   header.bits.long_packet |
+                   header.bits.runt_packet_received |
+                   header.bits.invalid_symbol_error;
+        }
     };
     
 

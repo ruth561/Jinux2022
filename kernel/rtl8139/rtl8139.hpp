@@ -24,7 +24,12 @@ namespace rtl8139
 
         OperationalRegister *opt_;
         
-        uint64_t rx_buffer_;
+        uint64_t rx_buffer_; // Rx Bufferの先頭アドレス
+        size_t rx_buffer_size_; // Rx Bufferの大きさ
+
+        uint16_t rx_offset_; // Rx Ringの次の読み込み位置
+
+        std::vector<uintptr_t> packets_;
     };
 
     void Initialize();

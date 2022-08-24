@@ -13,3 +13,6 @@
 RTL8139Dデータシート  
 https://www.cs.usfca.edu/~cruse/cs326f04/RTL8139D_DataSheet.pdf  
 
+rtl8139のリングバッファの説明
+https://slidetodoc.com/the-hardware-ringbuffer-understanding-the-rtl8139-mechanism-for/
+

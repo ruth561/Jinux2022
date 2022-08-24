@@ -38,28 +38,30 @@ namespace rtl8139
     int Controller::Initialize()
     {
         logger->info("MAC address: %012lx\n", opt_->mac_address);
-        logger->info("CONFIG1: %hhx\n", opt_->config1.data);
-        opt_->config1.data = 0; // power on
+        
+        // power on
+        opt_->config1.data = 0;
 
-        logger->info("Command Register: %hhx\n", opt_->command_register.data);
+        // reset
         opt_->command_register.bits.reset = 1;
-        while (opt_->command_register.bits.reset) continue;
+        while (opt_->command_register.bits.reset) {}
         logger->info("RTL8139 Reset Completed.\n");
-        logger->info("Command Register: %hhx\n", opt_->command_register.data);
 
-        // Receive用のバッファを確保する
-        size_t rx_buffer_size = 8192 + 16;
-        rx_buffer_ = reinterpret_cast<uint64_t>(malloc(rx_buffer_size));
-        if (rx_buffer_ > 0xfffffffful) { // バッファは32bitメモリ空間に存在していなければならない
+        // Rx Bufferの確保
+        rx_buffer_size_ = 8192 + 16;
+        rx_buffer_ = reinterpret_cast<uint64_t>(malloc(rx_buffer_size_));
+        if (rx_buffer_ > 0xfffffffful) { 
+            // バッファは32bitメモリ空間に存在していなければならない
             logger->error("[RTL8139] Rx Buffer Pointer Is Over 32bit Address.\n");
             return -1;
         }
-        memset(reinterpret_cast<void *>(rx_buffer_), 0, rx_buffer_size);
-        logger->debug("Rx Buffer: %p\n", rx_buffer_);
+        memset(reinterpret_cast<void *>(rx_buffer_), 0, rx_buffer_size_);
         opt_->receive_buffer_start_address = static_cast<uint32_t>(rx_buffer_);
+        rx_offset_ = 0; // Rx Offsetをバッファの先頭に初期化
+        logger->debug("Rx Buffer: %p\n", rx_buffer_);
 
-        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
         // 全ての割り込みを許可する
+        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
         opt_->interrupt_mask_register.bits.receive_ok_interupt = true;
         opt_->interrupt_mask_register.bits.receive_error_interrupt = true;
         opt_->interrupt_mask_register.bits.transmit_ok_interupt = true;
@@ -72,20 +74,54 @@ namespace rtl8139
         opt_->interrupt_mask_register.bits.system_error_interupt = true;
         logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
 
-
-
-        logger->debug("Receive Configuration Register: %x\n", opt_->receive_configuration_register.data);
+        // Rx Configの設定
+        logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
         opt_->receive_configuration_register.bits.wrap = 0; // 通常のリングバッファ（オーバーフローさせない）
         opt_->receive_configuration_register.bits.rx_buffer_length = 0; // リングの大きさは8192+16bytes
-        logger->debug("Receive Configuration Register: %x\n", opt_->receive_configuration_register.data);
+        opt_->receive_configuration_register.bits.multiple_early_interrupt_select = 1; // パケットを受け取るたびに割り込みを発生させる
+        logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
 
-        // opt_->current_address_of_packet_read = 0; // リングバッファへのポインタを０で初期化する
-        opt_->command_register.bits.receiver_enable = 1; // Receiveを開始する
-
-
+        // Receiveを開始する
+        opt_->command_register.bits.receiver_enable = 1;
+        logger->debug("CAPR: %hx, CBA: %hx\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
 
         return 0;
     }
+
+    void Controller::ReceivePacket()
+    {
+        if (opt_->command_register.bits.buffer_empty) {
+            // Rx Bufferに何も入っていない場合
+            return;
+        }
+
+        Packet *packet = reinterpret_cast<Packet *>(rx_buffer_ + rx_offset_);
+        if (packet->HasError()) {
+            logger->error("Packet Error\n");
+            logger->error("Header: %04hx\n", packet->header.data);
+            return;
+        }
+
+        uint16_t packet_size = packet->length - 4; // 先頭４バイト分はいらない
+        printk("Packet:   ");
+        for (int i = 0; i < packet_size; i++) {
+            printk("%02hhx ", packet->data[i]);
+        }
+        printk("\n");
+
+        if (rx_offset_ + packet->length > rx_buffer_size_) {
+            // リングの終端に来た場合
+        }
+
+        // headerの4byte分多めにとり4byteでアラインメント
+        rx_offset_ = (rx_offset_ + packet->length + 4 + 3) & ~3;
+
+        // CAPRには、オフセットから0x10引いた値を入れることになっている
+        opt_->current_address_of_packet_read = rx_offset_ - 0x10;
+        logger->debug("CAPR: %hd, CBA: %hd\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
+    }
+
+
 
     void Initialize()
     {
@@ -115,23 +151,6 @@ namespace rtl8139
             rtl8139->ReceivePacket();
         }
 
-    }
-
-    void Controller::ReceivePacket()
-    {
-        if (opt_->current_buffer_address == opt_->current_address_of_packet_read) {
-            // バッファに未読のパケットがない場合
-            return;
-        }
-        Packet *packet = reinterpret_cast<Packet *>(rx_buffer_ + opt_->current_address_of_packet_read);
-        printk("Header: %04hx\n", packet->header.data);
-        printk("Length: %d\n", packet->length);
-        printk("Data:   ");
-        for (int i = 0; i < packet->length; i++) {
-            printk("%02hhx ", packet->data[i]);
-        }
-
-        opt_->current_address_of_packet_read = opt_->current_buffer_address;
     }
 
 }
