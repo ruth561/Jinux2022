@@ -99,19 +99,37 @@ namespace rtl8139
         if (packet->HasError()) {
             logger->error("Packet Error\n");
             logger->error("Header: %04hx\n", packet->header.data);
+            Halt();
+            return;
+        }
+        if (!packet->header.bits.receive_ok) {
+            logger->error("Packet Is Not OK..\n");
+            Halt();
             return;
         }
 
-        // とりあえずパケットの出力をしておく
-        PacketDump(packet);
-
-        if (rx_offset_ + packet->length > rx_buffer_size_) {
-            // リングの終端に来た場合
+        // パケットデータをコピーする領域を確保する
+        Packet *p =  reinterpret_cast<Packet *>(malloc(packet->length));
+        packets_.push_back(p);
+        if (rx_offset_ + packet->length > rx_buffer_size_) { // リングの終端に来た場合
+            printk("!!!Rx Buffer Reached To End!!!\n"); // 後ほど境界の動作が成功しているかどうかのデバッグに用いる
+            int semi_count = rx_buffer_size_ - rx_offset_; // packetの先頭からバッファの最後までのバイト数
+            memcpy(p, packet, semi_count);
+            memcpy(reinterpret_cast<char *>(p) + semi_count, 
+                   reinterpret_cast<void *>(rx_buffer_), 
+                   packet->length - semi_count);
+        } else {
+            memcpy(p, packet, packet->length);
         }
+
+        // とりあえずパケットの出力をしておく
+        logger->debug("packets_.back() = %p, packets_.size() = %d\n", packets_.back(), packets_.size());
+        PacketDump(packets_.back());
 
         // headerの4byte分多めにとり4byteでアラインメント
         // 4byte分多めにとっているのは、パケットの後ろに4byteのデータが付属しているから？
-        // CRCなるものが付属しているらしく、後で調べてみよう、、。
+        // CRCなるものが付属しているらしい
+        // 後で調べてみよう、、。
         rx_offset_ = (rx_offset_ + packet->length + 4 + 3) & ~3;
 
         // CAPRには、オフセットから0x10引いた値を入れることになっている

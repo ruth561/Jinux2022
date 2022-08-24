@@ -29,7 +29,7 @@ namespace rtl8139
 
         uint16_t rx_offset_; // Rx Ringの次の読み込み位置
 
-        std::vector<uintptr_t> packets_;
+        std::vector<Packet *> packets_;
     };
 
     void Initialize();
