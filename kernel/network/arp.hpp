@@ -35,12 +35,20 @@ namespace arp
         uint8_t dst_mac_addr[6];
         uint8_t dst_ip_addr[4];
     } __attribute__((packed));
+    
+    // ARPパケットを見やすい形にして表示する
+    void ARPDump(ARPFrame *frame);
 
+    // ARPパケットを受け取り、対応する
     void HandlePacket(ARPFrame *frame);
 
+    // ARPフレームをEthernetで送信する
     void SendPacket(ARPFrame *frame);
 
     // 指定したIPアドレスへARPリクエストを送信する
     void SendRequest(uint8_t *dst_ip_addr);
+
+    // ARPリクエストへの返信を送る
+    void SendReply(ARPFrame *request);
 
 }

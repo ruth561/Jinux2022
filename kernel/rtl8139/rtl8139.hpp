@@ -19,8 +19,8 @@ namespace rtl8139
 
         int Initialize();
 
-        // MACアドレスをuint8_t[6]という形式で返す
-        uint8_t *MACAddress() { return mac_addr_; }
+        uint8_t *MACAddress() { return mac_addr_; } // MACアドレスをuint8_t[6]という形式で返す
+        uint8_t *IPAddress() { return ip_addr_; } // IPアドレスをuint8_t[4]という形式で返す
 
         // Rx Bufferからパケットを受け取り処理をする
         void ReceivePacket();
@@ -33,6 +33,7 @@ namespace rtl8139
         OperationalRegister *opt_;
 
         uint8_t mac_addr_[6];
+        uint8_t ip_addr_[4];
         
         uint64_t rx_buffer_; // Rx Bufferの先頭アドレス
         size_t rx_buffer_size_; // Rx Bufferの大きさ
