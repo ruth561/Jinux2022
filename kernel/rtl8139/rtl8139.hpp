@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <array>
 
 #include "../pci.hpp"
 #include "../logging.hpp"
@@ -18,7 +19,11 @@ namespace rtl8139
 
         int Initialize();
 
+        // Rx Bufferからパケットを受け取り処理をする
         void ReceivePacket();
+
+        // 長さlenの生のパケットpacketを送信する
+        void SendPacket(void *packet, uint16_t len);
 
     private:
         const uint32_t mmio_base_;
@@ -27,6 +32,10 @@ namespace rtl8139
         
         uint64_t rx_buffer_; // Rx Bufferの先頭アドレス
         size_t rx_buffer_size_; // Rx Bufferの大きさ
+
+        size_t max_packet_size_ = 0x700; // 転送可能なパケットの大きさの最大
+        std::array<void *, 4> tx_buffers_; // それぞれ、TSAに書き込む値
+        int current_tx_buffer_; // 次使用するtx_buffers_の番号（0->1->2->3->0->..）
 
         uint16_t rx_offset_; // Rx Ringの次の読み込み位置
 

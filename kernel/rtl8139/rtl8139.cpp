@@ -37,7 +37,9 @@ namespace rtl8139
 
     int Controller::Initialize()
     {
-        logger->info("MAC address: %012lx\n", opt_->mac_address);
+        logger->info("MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n", 
+            opt_->mac_address[0], opt_->mac_address[1], opt_->mac_address[2], 
+            opt_->mac_address[3], opt_->mac_address[4], opt_->mac_address[5]);
         
         // power on
         opt_->config1.data = 0;
@@ -45,7 +47,7 @@ namespace rtl8139
         // reset
         opt_->command_register.bits.reset = 1;
         while (opt_->command_register.bits.reset) {}
-        logger->info("RTL8139 Reset Completed.\n");
+        // logger->info("RTL8139 Reset Completed.\n");
 
         // Rx Bufferの確保
         rx_buffer_size_ = 8192 + 16;
@@ -60,7 +62,29 @@ namespace rtl8139
         rx_offset_ = 0; // Rx Offsetをバッファの先頭に初期化
         logger->debug("Rx Buffer: %p\n", rx_buffer_);
 
-        // 全ての割り込みを許可する
+        // Rx Configの設定
+        // logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
+        opt_->receive_configuration_register.bits.wrap = 0; // 通常のリングバッファ（オーバーフローさせない）
+        opt_->receive_configuration_register.bits.rx_buffer_length = 0; // リングの大きさは8192+16bytes
+        opt_->receive_configuration_register.bits.multiple_early_interrupt_select = 1; // パケットを受け取るたびに割り込みを発生させる
+        // logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
+
+        //Tx Bufferの確保
+        size_t max_packet_size_ = 0x700;
+        for (int i = 0; i < 4; i++) {
+            void *tx_buffer = malloc(max_packet_size_);
+            if (reinterpret_cast<uint64_t>(tx_buffer) > 0xfffffffful) { // 32bitメモリにマップできなければ
+                logger->error("Tx Buffer Cannot Map 32bit Memory.\n");
+                Halt();
+            }
+            tx_buffers_[i] = tx_buffer;
+            opt_->transmit_start_address_of_descriptor[i] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(tx_buffer)); // ここで設定する必要ない？
+            // logger->debug("Tx Buffer %d: 0x%x\n", i, opt_->transmit_start_address_of_descriptor[i]);
+            // logger->debug("Tx Status %d: 0x%08x\n", i, opt_->transmit_status_of_descriptor[i]);
+        }
+        current_tx_buffer_ = 0;
+
+        /* // 全ての割り込みを許可する
         logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
         opt_->interrupt_mask_register.bits.receive_ok_interupt = true;
         opt_->interrupt_mask_register.bits.receive_error_interrupt = true;
@@ -72,19 +96,13 @@ namespace rtl8139
         opt_->interrupt_mask_register.bits.cable_length_change_interupt = true;
         opt_->interrupt_mask_register.bits.timeout_interupt = true;
         opt_->interrupt_mask_register.bits.system_error_interupt = true;
-        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
+        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data); */
 
-        // Rx Configの設定
-        logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
-        opt_->receive_configuration_register.bits.wrap = 0; // 通常のリングバッファ（オーバーフローさせない）
-        opt_->receive_configuration_register.bits.rx_buffer_length = 0; // リングの大きさは8192+16bytes
-        opt_->receive_configuration_register.bits.multiple_early_interrupt_select = 1; // パケットを受け取るたびに割り込みを発生させる
-        logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
-
-        // Receiveを開始する
+        // パケットの受け取りを開始する
         opt_->command_register.bits.receiver_enable = 1;
-        logger->debug("CAPR: %hx, CBA: %hx\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
 
+        // パケットの送信を有効にする
+        opt_->command_register.bits.transmitter_enable = 1;
         return 0;
     }
 
@@ -140,6 +158,40 @@ namespace rtl8139
         // logger->debug("CAPR: %hd, CBA: %hd\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
     }
 
+    void Controller::SendPacket(void *packet, uint16_t len)
+    {
+        if (len > max_packet_size_) {
+            logger->error("Too Large Packet! (len = %d)\n", len);
+            Halt();
+        }
+
+        // Tx Bufferにpacketデータをコピー
+        memcpy(tx_buffers_[current_tx_buffer_], packet, len);
+
+        // 先頭アドレスの更新（必要ある？）
+        opt_->transmit_start_address_of_descriptor[current_tx_buffer_] = static_cast<uint32_t>(
+            reinterpret_cast<uint64_t>(tx_buffers_[current_tx_buffer_]));
+
+        // Transmit Statusの設定
+        TxStatusRegister *tx_status = &opt_->transmit_status_of_descriptor[current_tx_buffer_];
+        tx_status->bits.descriptor_size = len;
+        // tx_status->bits.early_tx_threshold = 0x3f;
+        tx_status->bits.own = 0; // パケットの送信処理を開始させる
+        while (!tx_status->bits.own) { 
+            printk("."); 
+        }
+
+        if (tx_status->bits.transmit_ok) {
+            printk("Transmit OK\n");
+        } else {
+            logger->error("Transmit Not OK. Status Register: %08x\n", *tx_status);
+            Halt();
+        }
+        // logger->debug("Status: %08x\n", *tx_status);
+        
+        current_tx_buffer_ = (current_tx_buffer_ + 1) % 4; // 0->1->2->3->0->..
+    }
+
 
 
     void Initialize()
@@ -150,18 +202,18 @@ namespace rtl8139
         }
 
         uint32_t data = pci::ConfigRead32(rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 4);
-        logger->debug("Command: 0x%hx\n", data);
-        logger->debug("Status: 0x%hx\n", data >> 16);
+        // logger->debug("Command: 0x%hx\n", data);
+        // logger->debug("Status: 0x%hx\n", data >> 16);
         pci::ConfigWrite32(data | (1 << 1), rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 4); // DMAの許可
 
         data = pci::ConfigRead32(rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 0x14);
-        logger->debug("Memory Address: 0x%x\n", data);
+        // logger->debug("Memory Address: 0x%x\n", data);
         if (data & 1) { // Bit０が１の時
             logger->error("Cannot Access To Memory Mapped Registers.\n");
             return;
         }
         uint32_t mmio_base = data & ~0xffu;
-        logger->debug("mmio_base: 0x%x\n", mmio_base);
+        // logger->debug("mmio_base: 0x%x\n", mmio_base);
 
         rtl8139 = new Controller{mmio_base};
         rtl8139->Initialize();

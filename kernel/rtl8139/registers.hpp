@@ -7,6 +7,24 @@
 
 namespace rtl8139
 {
+    union TxStatusRegister 
+    {
+        uint32_t data;
+        struct {
+            uint32_t descriptor_size: 13; 
+            uint32_t own: 1;
+            uint32_t fifo_underrun: 1;
+            uint32_t transmit_ok: 1; // パケットの転送が完了したら１がセットされる（RO）
+            uint32_t early_tx_threshold: 6;
+            uint32_t : 2;
+            uint32_t collision_count: 4;
+            uint32_t cd_heart_beat: 1;
+            uint32_t out_of_window_collision: 1;
+            uint32_t transmit_abort: 1;
+            uint32_t carrier_sense_lost: 1;
+        } __attribute__((packed)) bits;
+    } __attribute__((packed));
+
     union CommandRegister
     {
         uint8_t data;
@@ -100,9 +118,10 @@ namespace rtl8139
 
     struct OperationalRegister 
     {
-        uint64_t mac_address; // 0h
+        uint8_t mac_address[6]; // 0h~5h
+        uint16_t : 16; // reserved
         uint8_t multicast_registers[8]; // 8h~fh
-        uint32_t transmit_status_of_descriptor[4]; // 10h~1fh
+        TxStatusRegister transmit_status_of_descriptor[4]; // 10h~1fh
         uint32_t transmit_start_address_of_descriptor[4]; // 20h~2fh
         uint32_t receive_buffer_start_address; // 30h~33h
         uint16_t early_receive_byte_count; // 34h~35h

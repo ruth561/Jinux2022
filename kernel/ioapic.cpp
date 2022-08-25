@@ -43,7 +43,7 @@ namespace ioapic
     void Initialize()
     {
         logging::LoggingLevel current_level = logger->current_level();
-        logger->set_level(logging::kDEBUG);
+        logger->set_level(logging::kERROR);
         logger->debug("IO APIC ID:          %08x\n", Read(IOAPICID));
         logger->debug("IO APIC VERSION:     %08x\n", Read(IOAPICVER));
         logger->debug("IO APIC ARBITRATION: %08x\n", Read(IOAPICARB));
