@@ -7,6 +7,7 @@
 #include "../logging.hpp"
 #include "registers.hpp"
 #include "packet.hpp"
+#include "../network/ethernet.hpp"
 
 namespace rtl8139
 {

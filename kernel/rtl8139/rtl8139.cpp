@@ -123,8 +123,11 @@ namespace rtl8139
         }
 
         // とりあえずパケットの出力をしておく
-        logger->debug("packets_.back() = %p, packets_.size() = %d\n", packets_.back(), packets_.size());
+        // logger->debug("packets_.back() = %p, packets_.size() = %d\n", packets_.back(), packets_.size());
         PacketDump(packets_.back());
+
+        // EthernetHandlerへ渡す
+        ethernet::HandlePacket(reinterpret_cast<ethernet::EthernetFrame *>(p->data), p->length - 4); // データ部分だけを渡す
 
         // headerの4byte分多めにとり4byteでアラインメント
         // 4byte分多めにとっているのは、パケットの後ろに4byteのデータが付属しているから？
@@ -134,7 +137,7 @@ namespace rtl8139
 
         // CAPRには、オフセットから0x10引いた値を入れることになっている
         opt_->current_address_of_packet_read = rx_offset_ - 0x10;
-        logger->debug("CAPR: %hd, CBA: %hd\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
+        // logger->debug("CAPR: %hd, CBA: %hd\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
     }
 
 

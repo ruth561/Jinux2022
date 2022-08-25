@@ -37,4 +37,4 @@ rtl8139/rtl8139.o: rtl8139/rtl8139.cpp rtl8139/rtl8139.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
   rtl8139/../asmfunc.h rtl8139/../logging.hpp rtl8139/registers.hpp \
-  rtl8139/packet.hpp
+  rtl8139/packet.hpp rtl8139/../network/ethernet.hpp
