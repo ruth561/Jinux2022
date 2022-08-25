@@ -1,5 +1,20 @@
 #include "network_lib.hpp"
+int printk(const char *format, ...);
+void Halt();
+extern logging::Logger *logger;
 
+void HexDump(void *buf, int len)
+{
+    uint8_t *data = reinterpret_cast<uint8_t *>(buf);
+    printk("[HexDump]");
+    for (int i = 0; i < len; i++) {
+        if (i % 16 == 0) {
+            printk("\n%04hx: ", i);
+        }
+        printk("%02hhx ", data[i]);
+    }
+    printk("\n");
+}
 
 // host to network short
 uint16_t htons(uint16_t host_short)

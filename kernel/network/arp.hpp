@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include "network_lib.hpp"
+#include "ethernet.hpp"
 
 
 namespace arp
@@ -9,6 +10,11 @@ namespace arp
     enum HardwareType 
     {
         kEthernet = 0x0001
+    };
+
+    enum ProtocolType 
+    {
+        kIPv4 = 0x0800
     };
 
     enum Opcode 
@@ -31,4 +37,10 @@ namespace arp
     } __attribute__((packed));
 
     void HandlePacket(ARPFrame *frame);
+
+    void SendPacket(ARPFrame *frame);
+
+    // 指定したIPアドレスへARPリクエストを送信する
+    void SendRequest(uint8_t *dst_ip_addr);
+
 }

@@ -3,7 +3,10 @@
 int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
-
+namespace rtl8139
+{
+    extern Controller *rtl8139;
+}
 
 namespace ethernet
 {
@@ -34,5 +37,26 @@ namespace ethernet
                 logger->warning("Ethernet Unknown Type: %04hx\n", frame->type);
                 break;
         }
+    }
+
+    void SendPacket(uint8_t *dst_mac_addr, uint8_t *src_mac_addr, uint16_t proto, 
+                    void *payload, int payload_len)
+    {
+        int pkt_len = sizeof(EthernetFrame) + payload_len;
+        EthernetFrame *pkt_buf = reinterpret_cast<EthernetFrame *>(malloc(pkt_len));
+        
+        // MAC
+        memcpy(pkt_buf->dst_mac_address, dst_mac_addr, 6);
+        memcpy(pkt_buf->src_mac_address, src_mac_addr, 6);
+
+        pkt_buf->type = htons(proto);
+
+        memcpy(pkt_buf->payload, payload, payload_len);
+
+        printk("[Send Packet]\n");
+        HexDump(pkt_buf, pkt_len);
+        rtl8139::rtl8139->SendPacket(pkt_buf, pkt_len);
+
+        free(pkt_buf);
     }
 }

@@ -40,6 +40,7 @@ namespace rtl8139
         logger->info("MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n", 
             opt_->mac_address[0], opt_->mac_address[1], opt_->mac_address[2], 
             opt_->mac_address[3], opt_->mac_address[4], opt_->mac_address[5]);
+        memcpy(mac_addr_, opt_->mac_address, 6);
         
         // power on
         opt_->config1.data = 0;
@@ -217,6 +218,9 @@ namespace rtl8139
 
         rtl8139 = new Controller{mmio_base};
         rtl8139->Initialize();
+
+        uint8_t dst_ip_addr[] = {10, 0, 2, 3};
+        arp::SendRequest(dst_ip_addr);
 
         while (1) {
             rtl8139->ReceivePacket();

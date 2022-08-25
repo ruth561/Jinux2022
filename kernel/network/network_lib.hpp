@@ -1,6 +1,10 @@
 #pragma once 
 
 #include <cstdint>
+#include "../logging.hpp"
+
+// bufからlenだけ１６進数でダンプする
+void HexDump(void *buf, int len);
 
 // host to network short
 uint16_t htons(uint16_t host_short);
