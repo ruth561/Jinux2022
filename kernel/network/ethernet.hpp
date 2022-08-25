@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include "network_lib.hpp"
+#include "arp.hpp"
 
 
 namespace ethernet
@@ -21,6 +22,6 @@ namespace ethernet
         uint8_t payload[];
     } __attribute__((packed));
 
-    void HandlePacket(EthernetFrame *packet, uint16_t len);
+    void HandlePacket(EthernetFrame *frame, uint16_t len);
 
 }
