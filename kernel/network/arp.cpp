@@ -28,21 +28,21 @@ namespace arp
     void ARPDump(ARPFrame *frame)
     {
         // ダンプ
-        logger->debug("#ARP\n");
-        logger->debug("    Hardware Type: %04hx\n", ntohs(frame->hw_type));
-        logger->debug("    Protocol Type: %04hx\n", ntohs(frame->proto_type));
-        logger->debug("    Hardware Size: %hhd\n", frame->hw_size);
-        logger->debug("    Protocol Size: %hhd\n", frame->proto_size);
-        logger->debug("    Opcode: %04hx\n", ntohs(frame->opcode));
-        logger->debug("    Src MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
+        printk("# ARP\n");
+        printk("    Hardware Type: %04hx\n", ntohs(frame->hw_type));
+        printk("    Protocol Type: %04hx\n", ntohs(frame->proto_type));
+        printk("    Hardware Size: %hhd\n", frame->hw_size);
+        printk("    Protocol Size: %hhd\n", frame->proto_size);
+        printk("    Opcode: %04hx\n", ntohs(frame->opcode));
+        printk("    Src MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
             frame->src_mac_addr[0], frame->src_mac_addr[1], frame->src_mac_addr[2], 
             frame->src_mac_addr[3], frame->src_mac_addr[4], frame->src_mac_addr[5]);
-        logger->debug("    Src IP Address: %hhu:%hhu:%hhu:%hhu\n", 
+        printk("    Src IP Address: %hhu:%hhu:%hhu:%hhu\n", 
             frame->src_ip_addr[0], frame->src_ip_addr[1], frame->src_ip_addr[2], frame->src_ip_addr[3]);
-        logger->debug("    Dst MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
+        printk("    Dst MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
             frame->dst_mac_addr[0], frame->dst_mac_addr[1], frame->dst_mac_addr[2], 
             frame->dst_mac_addr[3], frame->dst_mac_addr[4], frame->dst_mac_addr[5]);
-        logger->debug("    Dst IP Address: %hhu:%hhu:%hhu:%hhu\n", 
+        printk("    Dst IP Address: %hhu:%hhu:%hhu:%hhu\n", 
             frame->dst_ip_addr[0], frame->dst_ip_addr[1], frame->dst_ip_addr[2], frame->dst_ip_addr[3]);
     }
 

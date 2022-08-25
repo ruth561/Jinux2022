@@ -148,7 +148,7 @@ namespace rtl8139
 
         // とりあえずパケットの出力をしておく
         // logger->debug("packets_.back() = %p, packets_.size() = %d\n", packets_.back(), packets_.size());
-        PacketDump(packets_.back());
+        // PacketDump(packets_.back());
 
         // EthernetHandlerへ渡す
         ethernet::HandlePacket(reinterpret_cast<ethernet::EthernetFrame *>(p->data), p->length - 4); // データ部分だけを渡す

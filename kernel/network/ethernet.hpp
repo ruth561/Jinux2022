@@ -3,6 +3,7 @@
 
 #include "network_lib.hpp"
 #include "arp.hpp"
+#include "ip.hpp"
 
 #include "../rtl8139/rtl8139.hpp"
 
@@ -24,6 +25,10 @@ namespace ethernet
         uint8_t payload[];
     } __attribute__((packed));
 
+    // イーサネットフレームをダンプして表示する
+    void Dump(EthernetFrame *frame);
+
+    // イーサネットフレームを解析し上位層へ渡す
     void HandlePacket(EthernetFrame *frame, uint16_t len);
 
     // Ethernetパケットをrtl8139を用いて送信する。

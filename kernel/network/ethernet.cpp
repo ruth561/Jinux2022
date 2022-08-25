@@ -10,14 +10,20 @@ namespace rtl8139
 
 namespace ethernet
 {
-
-    void HandlePacket(EthernetFrame *frame, uint16_t len)
+    void Dump(EthernetFrame *frame)
     {
-        logger->debug("Ethernet, Src: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx, Dst: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n", 
+        printk("# Ethernet\n");
+        printk("    Src MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n", 
             frame->src_mac_address[0], frame->src_mac_address[1], frame->src_mac_address[2], 
-            frame->src_mac_address[3], frame->src_mac_address[4], frame->src_mac_address[5], 
+            frame->src_mac_address[3], frame->src_mac_address[4], frame->src_mac_address[5]);
+        printk("    Dst MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n", 
             frame->dst_mac_address[0], frame->dst_mac_address[1], frame->dst_mac_address[2],
             frame->dst_mac_address[3], frame->dst_mac_address[4], frame->dst_mac_address[5]);
+    }
+    void HandlePacket(EthernetFrame *frame, uint16_t len)
+    {
+        printk("[Receive Packet]\n");
+        Dump(frame);
         
         switch (ntohs(frame->type)) {
             case EthernetType::kARP:
@@ -26,7 +32,8 @@ namespace ethernet
                 break;
             
             case EthernetType::kIPv4:
-                logger->debug("(IPv4)\n");
+                // logger->debug("(IPv4)\n");
+                ip::HandlePacket(reinterpret_cast<ip::Frame *>(frame->payload));
                 break;
 
             case EthernetType::kIPv6:
