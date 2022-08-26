@@ -23,6 +23,7 @@
 #include "usb/xhci/xhci.hpp"
 #include "rtl8139/rtl8139.hpp"
 #include "ioapic.hpp"
+#include "network/network.hpp"
 
 
 void Halt(void);
@@ -73,7 +74,7 @@ extern "C" void KernelMainNewStack(
     InitializePCI();
 
     logger->set_level(logging::kDEBUG); // 出力減らす
-    rtl8139::Initialize(); // RTL8139の初期化
+    network::Initialize();
 
     Halt();
  

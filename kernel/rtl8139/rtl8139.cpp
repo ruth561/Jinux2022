@@ -29,8 +29,6 @@ namespace pci
 
 namespace rtl8139
 {
-    Controller *rtl8139;
-
     Controller::Controller(uint32_t mmio_base) : 
         mmio_base_{mmio_base}, 
         opt_{reinterpret_cast<OperationalRegister *>(mmio_base_)} {}
@@ -41,19 +39,14 @@ namespace rtl8139
             opt_->mac_address[0], opt_->mac_address[1], opt_->mac_address[2], 
             opt_->mac_address[3], opt_->mac_address[4], opt_->mac_address[5]);
         memcpy(mac_addr_, opt_->mac_address, 6);
-        // デフォルトで割り振られているものを使う
-        ip_addr_[0] = 10;
-        ip_addr_[1] = 0;
-        ip_addr_[2] = 2;
-        ip_addr_[3] = 15;
         
-        // power on
+        // 電源を入れる
         opt_->config1.data = 0;
 
-        // reset
+        // リセット
         opt_->command_register.bits.reset = 1;
         while (opt_->command_register.bits.reset) {}
-        // logger->info("RTL8139 Reset Completed.\n");
+        logger->info("RTL8139 Reset Completed.\n");
 
         // Rx Bufferの確保
         rx_buffer_size_ = 8192 + 16;
@@ -69,11 +62,11 @@ namespace rtl8139
         logger->debug("Rx Buffer: %p\n", rx_buffer_);
 
         // Rx Configの設定
-        // logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
+        logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
         opt_->receive_configuration_register.bits.wrap = 0; // 通常のリングバッファ（オーバーフローさせない）
         opt_->receive_configuration_register.bits.rx_buffer_length = 0; // リングの大きさは8192+16bytes
         opt_->receive_configuration_register.bits.multiple_early_interrupt_select = 1; // パケットを受け取るたびに割り込みを発生させる
-        // logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
+        logger->debug("Receive Configuration Register: %08x\n", opt_->receive_configuration_register.data);
 
         //Tx Bufferの確保
         size_t max_packet_size_ = 0x700;
@@ -112,11 +105,16 @@ namespace rtl8139
         return 0;
     }
 
-    void Controller::ReceivePacket()
+    uint8_t *Controller::MACAddress()
+    { 
+        return mac_addr_; 
+    }
+
+    void *Controller::ReceivePacket()
     {
         if (opt_->command_register.bits.buffer_empty) {
             // Rx Bufferに何も入っていない場合
-            return;
+            return nullptr;
         }
 
         Packet *packet = reinterpret_cast<Packet *>(rx_buffer_ + rx_offset_);
@@ -124,44 +122,38 @@ namespace rtl8139
             logger->error("Packet Error\n");
             logger->error("Header: %04hx\n", packet->header.data);
             Halt();
-            return;
+            return nullptr;
         }
         if (!packet->header.bits.receive_ok) {
             logger->error("Packet Is Not OK..\n");
             Halt();
-            return;
+            return nullptr;
         }
 
         // パケットデータをコピーする領域を確保する
-        Packet *p =  reinterpret_cast<Packet *>(malloc(packet->length));
-        packets_.push_back(p);
+        uint16_t pkt_size = packet->length - 4; // データ部分の大きさ
+        Packet *p =  reinterpret_cast<Packet *>(malloc(pkt_size)); // returnする変数
         if (rx_offset_ + packet->length > rx_buffer_size_) { // リングの終端に来た場合
             printk("!!!Rx Buffer Reached To End!!!\n"); // 後ほど境界の動作が成功しているかどうかのデバッグに用いる
-            int semi_count = rx_buffer_size_ - rx_offset_; // packetの先頭からバッファの最後までのバイト数
-            memcpy(p, packet, semi_count);
+            int semi_count = rx_buffer_size_ - rx_offset_ - 4; // packetの先頭からバッファの最後までのバイト数
+            memcpy(p, packet->data, semi_count);
             memcpy(reinterpret_cast<char *>(p) + semi_count, 
                    reinterpret_cast<void *>(rx_buffer_), 
-                   packet->length - semi_count);
+                   pkt_size - semi_count);
         } else {
-            memcpy(p, packet, packet->length);
+            memcpy(p, packet->data, pkt_size);
         }
-
-        // とりあえずパケットの出力をしておく
-        // logger->debug("packets_.back() = %p, packets_.size() = %d\n", packets_.back(), packets_.size());
-        // PacketDump(packets_.back());
-
-        // EthernetHandlerへ渡す
-        ethernet::HandlePacket(reinterpret_cast<ethernet::EthernetFrame *>(p->data), p->length - 4); // データ部分だけを渡す
 
         // headerの4byte分多めにとり4byteでアラインメント
         // 4byte分多めにとっているのは、パケットの後ろに4byteのデータが付属しているから？
-        // CRCなるものが付属しているらしい
-        // 後で調べてみよう、、。
+        // CRCなるものが付属しているらしい。後で調べてみよう、、。
         rx_offset_ = (rx_offset_ + packet->length + 4 + 3) & ~3;
+        rx_offset_ %= rx_buffer_size_; // リングの最後尾に行ったら先頭に戻ってくるようにする
 
         // CAPRには、オフセットから0x10引いた値を入れることになっている
         opt_->current_address_of_packet_read = rx_offset_ - 0x10;
         // logger->debug("CAPR: %hd, CBA: %hd\n", opt_->current_address_of_packet_read, opt_->current_buffer_address);
+        return p;
     }
 
     void Controller::SendPacket(void *packet, uint16_t len)
@@ -181,7 +173,7 @@ namespace rtl8139
         // Transmit Statusの設定
         TxStatusRegister *tx_status = &opt_->transmit_status_of_descriptor[current_tx_buffer_];
         tx_status->bits.descriptor_size = len;
-        // tx_status->bits.early_tx_threshold = 0x3f;
+        // tx_status->bits.early_tx_threshold = 0x3f; // しきい値の取扱い方わからん
         tx_status->bits.own = 0; // パケットの送信処理を開始させる
         while (!tx_status->bits.own) { 
             printk("."); 
@@ -200,11 +192,11 @@ namespace rtl8139
 
 
 
-    void Initialize()
+    Controller *RTL8139Initialize()
     {
         pci::Device *rtl8139_dev = pci::FindRTL8139();
         if (rtl8139_dev == nullptr) {
-            return;
+            return nullptr;
         }
 
         uint32_t data = pci::ConfigRead32(rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 4);
@@ -216,21 +208,12 @@ namespace rtl8139
         // logger->debug("Memory Address: 0x%x\n", data);
         if (data & 1) { // Bit０が１の時
             logger->error("Cannot Access To Memory Mapped Registers.\n");
-            return;
+            return nullptr;
         }
         uint32_t mmio_base = data & ~0xffu;
         // logger->debug("mmio_base: 0x%x\n", mmio_base);
 
-        rtl8139 = new Controller{mmio_base};
-        rtl8139->Initialize();
-
-        /* uint8_t dst_ip_addr[] = {10, 0, 2, 3};
-        arp::SendRequest(dst_ip_addr); */
-
-        while (1) {
-            rtl8139->ReceivePacket();
-        }
-
+        return new Controller{mmio_base};
     }
 
 }

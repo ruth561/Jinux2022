@@ -1,11 +1,10 @@
 #pragma once 
 #include <cstdint>
 
+#include "network.hpp"
 #include "network_lib.hpp"
 #include "arp.hpp"
 #include "ip.hpp"
-
-#include "../rtl8139/rtl8139.hpp"
 
 
 namespace ethernet
@@ -29,7 +28,7 @@ namespace ethernet
     void Dump(EthernetFrame *frame);
 
     // イーサネットフレームを解析し上位層へ渡す
-    void HandlePacket(EthernetFrame *frame, uint16_t len);
+    void HandlePacket(EthernetFrame *frame);
 
     // Ethernetパケットをrtl8139を用いて送信する。
     // protoはProtocolTypeを用いて表現すると良い。

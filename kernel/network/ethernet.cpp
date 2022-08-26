@@ -3,9 +3,9 @@
 int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
-namespace rtl8139
+namespace network
 {
-    extern Controller *rtl8139;
+    extern NetworkManager *manager;
 }
 
 namespace ethernet
@@ -19,10 +19,11 @@ namespace ethernet
         printk("    Dst MAC Address: %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n", 
             frame->dst_mac_address[0], frame->dst_mac_address[1], frame->dst_mac_address[2],
             frame->dst_mac_address[3], frame->dst_mac_address[4], frame->dst_mac_address[5]);
+        printk("    Type: 0x%04hx\n", ntohs(frame->type));
     }
-    void HandlePacket(EthernetFrame *frame, uint16_t len)
+
+    void HandlePacket(EthernetFrame *frame)
     {
-        printk("[Receive Packet]\n");
         Dump(frame);
         
         switch (ntohs(frame->type)) {
@@ -62,7 +63,7 @@ namespace ethernet
 
         printk("[Send Packet]\n");
         HexDump(pkt_buf, pkt_len);
-        rtl8139::rtl8139->SendPacket(pkt_buf, pkt_len);
+        network::manager->SendPacket(pkt_buf, pkt_len);
 
         free(pkt_buf);
     }

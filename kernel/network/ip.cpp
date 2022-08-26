@@ -3,9 +3,9 @@
 int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
-namespace rtl8139
+namespace network
 {
-    extern Controller *rtl8139;
+    extern NetworkManager *manager;
 }
 
 

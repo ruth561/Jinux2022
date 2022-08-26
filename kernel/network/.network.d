@@ -1,9 +1,9 @@
-network/ip.o: network/ip.cpp network/ip.hpp \
+network/network.o: network/network.cpp network/network.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
-  network/network.hpp network/nic.hpp network/ethernet.hpp \
-  network/network_lib.hpp network/../logging.hpp network/arp.hpp \
+  network/nic.hpp network/ethernet.hpp network/network_lib.hpp \
+  network/../logging.hpp network/arp.hpp network/ip.hpp \
   network/../rtl8139/rtl8139.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \

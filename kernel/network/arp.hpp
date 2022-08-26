@@ -1,6 +1,7 @@
 #pragma once 
 #include <cstdint>
 
+#include "network.hpp"
 #include "network_lib.hpp"
 #include "ethernet.hpp"
 

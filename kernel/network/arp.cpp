@@ -3,9 +3,9 @@
 int printk(const char *format, ...);
 void Halt();
 extern logging::Logger *logger;
-namespace rtl8139
+namespace network
 {
-    extern Controller *rtl8139;
+    extern NetworkManager *manager;
 }
 
 namespace {
@@ -64,7 +64,7 @@ namespace arp
 
     void SendPacket(ARPFrame *frame)
     {
-        uint8_t *src_mac_address = rtl8139::rtl8139->MACAddress();
+        uint8_t *src_mac_address = network::manager->MACAddress();
 
         ethernet::SendPacket(broadcast_mac_address, src_mac_address, ethernet::EthernetType::kARP, frame, sizeof(ARPFrame));
     }
@@ -78,23 +78,19 @@ namespace arp
         frame.proto_size = 4;
         frame.opcode = htons(Opcode::kRequest);
         
-        memcpy(frame.src_mac_addr, rtl8139::rtl8139->MACAddress(), 6);
-        frame.src_ip_addr[0] = 10;
-        frame.src_ip_addr[1] = 0;
-        frame.src_ip_addr[2] = 2;
-        frame.src_ip_addr[3] = 14;
+        memcpy(frame.src_mac_addr, network::manager->MACAddress(), 6);
+        memcpy(frame.src_ip_addr, network::manager->IPAddress(), 4);
 
         memcpy(frame.dst_mac_addr, unknown_mac_address, 6);
         memcpy(frame.dst_ip_addr, dst_ip_addr, 4);
 
-        ethernet::SendPacket(broadcast_mac_address, rtl8139::rtl8139->MACAddress(), ethernet::EthernetType::kARP, 
-                             &frame, sizeof(ARPFrame));
+        ethernet::SendPacket(broadcast_mac_address, network::manager->MACAddress(), ethernet::EthernetType::kARP, &frame, sizeof(ARPFrame));
     }
 
     void SendReply(ARPFrame *request)
     {
         // 色々省略している、、
-        if (!CompareIPAddress(request->dst_ip_addr, rtl8139::rtl8139->IPAddress())) {
+        if (!CompareIPAddress(request->dst_ip_addr, network::manager->IPAddress())) {
             // 宛先IPアドレスが自分自身と違う場合
             return;
         }
@@ -106,13 +102,13 @@ namespace arp
         frame.proto_size = 4;
         frame.opcode = htons(Opcode::kReply);
         
-        memcpy(frame.src_mac_addr, rtl8139::rtl8139->MACAddress(), 6);
+        memcpy(frame.src_mac_addr, network::manager->MACAddress(), 6);
         memcpy(frame.src_ip_addr, request->dst_ip_addr, 4);
 
         memcpy(frame.dst_mac_addr, request->src_mac_addr, 6);
         memcpy(frame.dst_ip_addr, request->src_ip_addr, 4);
 
-        ethernet::SendPacket(request->src_mac_addr, rtl8139::rtl8139->MACAddress(), ethernet::EthernetType::kARP, 
+        ethernet::SendPacket(request->src_mac_addr, network::manager->MACAddress(), ethernet::EthernetType::kARP, 
                              &frame, sizeof(ARPFrame));
     }
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "../rtl8139/rtl8139.hpp"
+#include "network.hpp"
 
 namespace ip
 {

@@ -2,8 +2,9 @@ network/ethernet.o: network/ethernet.cpp network/ethernet.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
-  network/network_lib.hpp network/../logging.hpp network/arp.hpp \
-  network/ip.hpp network/../rtl8139/rtl8139.hpp \
+  network/network.hpp network/nic.hpp network/ip.hpp network/arp.hpp \
+  network/network_lib.hpp network/../logging.hpp \
+  network/../rtl8139/rtl8139.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
@@ -41,4 +42,5 @@ network/ethernet.o: network/ethernet.cpp network/ethernet.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
   network/../asmfunc.h network/../rtl8139/../logging.hpp \
   network/../rtl8139/registers.hpp network/../rtl8139/packet.hpp \
+  network/../rtl8139/../network/nic.hpp \
   network/../rtl8139/../network/ethernet.hpp
