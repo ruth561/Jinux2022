@@ -653,13 +653,13 @@ namespace usb::xhci
                 trb->bits.completion_code != TRBCompletionCode::kShortPacket) {
                     msg.arg.xhc_port_init.success = false;
                     task_manager->SendMessage(InitUSBDevTaskID, msg);
-                    task_manager->Wakeup(InitUSBDevTaskID);
+                    task_manager->Wakeup(InitUSBDevTaskID); // SendMessage内でWakeupしているので実は必要ない！？
                     return -1;
             }
             if (dev->IsInitialized() || dev->InitializePhase() == 0) {
                 msg.arg.xhc_port_init.success = true;
                 task_manager->SendMessage(InitUSBDevTaskID, msg);
-                task_manager->Wakeup(InitUSBDevTaskID);
+                task_manager->Wakeup(InitUSBDevTaskID);  // SendMessage内でWakeupしているので実は必要ない！？
                 return 0;
             }
         }

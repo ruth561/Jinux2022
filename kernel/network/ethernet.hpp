@@ -9,7 +9,7 @@
 
 namespace ethernet
 {
-    enum EthernetType 
+    enum ProtocolType 
     {
         kIPv4 = 0x0800, 
         kARP = 0x0806, 
@@ -33,7 +33,6 @@ namespace ethernet
     // Ethernetパケットをrtl8139を用いて送信する。
     // protoはProtocolTypeを用いて表現すると良い。
     // payloadは上の層のrawデータである。
-    void SendPacket(uint8_t *dst_mac_addr, uint8_t *src_mac_addr, uint16_t proto, 
-                    void *payload, int payload_len);
+    void SendPacket(uint8_t *dst_mac_addr, uint8_t *src_mac_addr, uint16_t proto, void *payload, int payload_len);
 
 }

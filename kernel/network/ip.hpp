@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include "network.hpp"
+#include "tcp.hpp"
 
 namespace ip
 {
@@ -15,7 +16,7 @@ namespace ip
     // このOSはリトルエンディアンで動作していることを仮定する
     struct Frame 
     {
-        uint8_t header_length: 4; // ✕４した値がヘッダの大きさ（bytes）
+        uint8_t header_len: 4; // ✕４した値がヘッダの大きさ（bytes）
         uint8_t version: 4; // 4か6か
         uint8_t type_of_service;
         uint16_t packet_len; // IPヘッダとIPペイロードを合わせた長さ(bytes)

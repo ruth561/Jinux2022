@@ -27,17 +27,17 @@ namespace ethernet
         Dump(frame);
         
         switch (ntohs(frame->type)) {
-            case EthernetType::kARP:
+            case ProtocolType::kARP:
                 // logger->debug("(ARP)\n");
                 arp::HandlePacket(reinterpret_cast<arp::ARPFrame *>(frame->payload));
                 break;
             
-            case EthernetType::kIPv4:
+            case ProtocolType::kIPv4:
                 // logger->debug("(IPv4)\n");
                 ip::HandlePacket(reinterpret_cast<ip::Frame *>(frame->payload));
                 break;
 
-            case EthernetType::kIPv6:
+            case ProtocolType::kIPv6:
                 logger->debug("(IPv6)\n");
                 break;
 
@@ -47,8 +47,7 @@ namespace ethernet
         }
     }
 
-    void SendPacket(uint8_t *dst_mac_addr, uint8_t *src_mac_addr, uint16_t proto, 
-                    void *payload, int payload_len)
+    void SendPacket(uint8_t *dst_mac_addr, uint8_t *src_mac_addr, uint16_t proto, void *payload, int payload_len)
     {
         int pkt_len = sizeof(EthernetFrame) + payload_len;
         EthernetFrame *pkt_buf = reinterpret_cast<EthernetFrame *>(malloc(pkt_len));

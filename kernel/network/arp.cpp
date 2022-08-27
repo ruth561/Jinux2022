@@ -66,7 +66,7 @@ namespace arp
     {
         uint8_t *src_mac_address = network::manager->MACAddress();
 
-        ethernet::SendPacket(broadcast_mac_address, src_mac_address, ethernet::EthernetType::kARP, frame, sizeof(ARPFrame));
+        ethernet::SendPacket(broadcast_mac_address, src_mac_address, ethernet::ProtocolType::kARP, frame, sizeof(ARPFrame));
     }
 
     void SendRequest(uint8_t *dst_ip_addr)
@@ -84,7 +84,7 @@ namespace arp
         memcpy(frame.dst_mac_addr, unknown_mac_address, 6);
         memcpy(frame.dst_ip_addr, dst_ip_addr, 4);
 
-        ethernet::SendPacket(broadcast_mac_address, network::manager->MACAddress(), ethernet::EthernetType::kARP, &frame, sizeof(ARPFrame));
+        ethernet::SendPacket(broadcast_mac_address, network::manager->MACAddress(), ethernet::ProtocolType::kARP, &frame, sizeof(ARPFrame));
     }
 
     void SendReply(ARPFrame *request)
@@ -108,7 +108,6 @@ namespace arp
         memcpy(frame.dst_mac_addr, request->src_mac_addr, 6);
         memcpy(frame.dst_ip_addr, request->src_ip_addr, 4);
 
-        ethernet::SendPacket(request->src_mac_addr, network::manager->MACAddress(), ethernet::EthernetType::kARP, 
-                             &frame, sizeof(ARPFrame));
+        ethernet::SendPacket(request->src_mac_addr, network::manager->MACAddress(), ethernet::ProtocolType::kARP, &frame, sizeof(ARPFrame));
     }
 }

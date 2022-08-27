@@ -4,7 +4,7 @@ network/arp.o: network/arp.cpp network/arp.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
   network/network.hpp network/nic.hpp network/ethernet.hpp \
   network/network_lib.hpp network/../logging.hpp network/ip.hpp \
-  network/../rtl8139/rtl8139.hpp \
+  network/tcp.hpp network/../rtl8139/rtl8139.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
