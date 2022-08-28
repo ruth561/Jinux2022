@@ -54,6 +54,25 @@ namespace acpi
         return true;
     }
 
+    
+    const FADT* fadt;
+
+    void WaitMilliseconds(unsigned long msec) {
+        const bool pm_timer_32 = (fadt->flags >> 8) & 1;
+        // printk("PM_TMR_BLK: %x\n", fadt->pm_tmr_blk);
+        const uint32_t start = ReadIOAddressSpace32(static_cast<uint16_t>(fadt->pm_tmr_blk));
+        uint32_t end = start + kPMTimerFreq * msec / 1000;
+        if (!pm_timer_32) {
+            end &= 0x00ffffffu;
+        }
+        // printk("start: %x, end: %x\n", start, end);
+
+        if (end < start) { // overflow
+            while (ReadIOAddressSpace32(fadt->pm_tmr_blk) >= start);
+        }
+        while (ReadIOAddressSpace32(fadt->pm_tmr_blk) < end);
+    }
+
     void Initialize(const RSDP *rsdp)
     {
         logging::LoggingLevel current_level = logger->current_level();
@@ -97,11 +116,10 @@ namespace acpi
         for (int i = 0; i < xsdt->Size(); i++) {
             DescriptionHeader *entry = xsdt->entries[i];
             if (entry->IsValid("FACP")) {
-                logger->debug("FACP!!\n");
+                fadt = reinterpret_cast<const FADT*>(entry);
+                logger->debug("FACP %p!!\n", fadt);
             }
         }
-
-        Halt();
 
         logger->set_level(current_level);
     }

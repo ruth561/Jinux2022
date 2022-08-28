@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "logging.hpp"
+#include "asmfunc.h"
 
 namespace acpi
 {
@@ -51,12 +52,18 @@ namespace acpi
         DescriptionHeader header;
 
         char reserved1[76 - sizeof(header)];
-        uint32_t pm_tmr_blk;
+        volatile uint32_t pm_tmr_blk;
         char reserved2[112 - 80];
-        uint32_t flags;
+        volatile uint32_t flags;
         char reserved3[276 - 116];
     } __attribute__((packed));
 
+
+    const int kPMTimerFreq = 3579545;
+    extern const FADT* fadt;
+
+    // PMタイマーを用いてmsecミリ秒を測る
+    void WaitMilliseconds(unsigned long msec);
 
     void Initialize(const RSDP *rsdp);
 }

@@ -8,6 +8,9 @@ extern logging::Logger *logger;
 extern TimerManager *timer_manager;
 extern TaskManager* task_manager;
 extern std::deque<Message> *main_queue;
+int printk(const char *format, ...);
+void Halt();
+
 
 namespace
 {
@@ -24,8 +27,18 @@ void InitializeLocalAPICTimer()
     // タイマーマネージャーの生成
     // 本来は１サイクルが１msかかるように設定したい。
     // 今回はとりあえず0x100000にしている。
-    timer_manager = new TimerManager(main_queue, 0x100000);
-    timer_manager->Start(); 
+    timer_manager = new TimerManager(main_queue);
+    timer_manager->Start(0x1000000); 
+    uint64_t start = timer_manager->TotalCount();
+    // 100ms待つ
+    acpi::WaitMilliseconds(100);
+    uint64_t end = timer_manager->TotalCount();
+    uint64_t counts_per_ms = (end - start) / 100;
+    printk("LAPIC Timer Counts %ld Per 1ms.\n", counts_per_ms);
+
+    timer_manager->Stop();
+    timer_manager->Start(counts_per_ms); // １チックにかかる時間を１msにする
+
 }
 
 extern "C" void LAPICTimerOnInterrupt(const TaskContext *ctx_stack)
@@ -41,9 +54,7 @@ extern "C" void LAPICTimerOnInterrupt(const TaskContext *ctx_stack)
 
  
 
-TimerManager::TimerManager(std::deque<Message> *msg_queue, uint32_t counts_per_loop) : 
-    tick_{0}, 
-    counts_per_loop_{counts_per_loop}
+TimerManager::TimerManager(std::deque<Message> *msg_queue) : tick_{0}
 {
     // 一旦APICタイマを止めておく。
     *kInitialCountRegister = 0;
@@ -64,9 +75,15 @@ TimerManager::TimerManager(std::deque<Message> *msg_queue, uint32_t counts_per_l
     timers_.push(Timer(0xffffffffu, -1));
 }
 
-void TimerManager::Start()
+void TimerManager::Start(uint32_t counts_per_loop)
 {
+    counts_per_loop_ = counts_per_loop;
     *kInitialCountRegister = counts_per_loop_; // 書き込んだ時点からタイマーはカウントを始める。
+}
+
+void TimerManager::Stop()
+{
+    *kInitialCountRegister = 0;
 }
 
 void TimerManager::AddTimer(Timer timer)

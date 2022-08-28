@@ -4,6 +4,7 @@
 #include "interrupt.hpp"
 #include "message.hpp"
 #include "task.hpp"
+#include "acpi.hpp"
 
 // lvt timer registerのレイアウト
 // 書き込みは32bitで一気にする必要がある。
@@ -72,11 +73,13 @@ public:
     // 各種レジスタの設定をする。
     //
     // counts_per_loop: １ループあたりのカウント数を指定する
-    TimerManager(std::deque<Message> *msg_queue, 
-                 uint32_t counts_per_loop);
+    TimerManager(std::deque<Message> *msg_queue);
 
     // 物理タイマーの開始
-    void Start();
+    void Start(uint32_t counts_per_loop);
+
+    // 物理タイマーのストップ
+    void Stop();
 
     // 論理タイマーの追加
     void AddTimer(Timer timer);

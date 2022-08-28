@@ -65,9 +65,9 @@ extern "C" void KernelMainNewStack(
     InitializeTSS(); // TSSをGDTに設定
 
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
-    InitializeLocalAPICTimer(); // タイマの設定
 
-    acpi::Initialize(acpi_table);
+    acpi::Initialize(acpi_table); // ACPIの設定
+    InitializeLocalAPICTimer(); // タイマの設定
 
     ioapic::Initialize();
 
@@ -78,13 +78,9 @@ extern "C" void KernelMainNewStack(
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
 
+    Halt();
     logger->set_level(logging::kDEBUG); // 出力減らす
     network::Initialize();
-
-    Halt();
- 
-
-
 
     usb::xhci::Initialize(); // xHCの初期化 
 

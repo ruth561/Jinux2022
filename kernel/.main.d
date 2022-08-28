@@ -49,8 +49,8 @@ main.o: main.cpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
-  message.hpp usb/xhci/trb.hpp task.hpp syscall.hpp msr.hpp pci.hpp \
-  usb/xhci/xhci.hpp usb/xhci/ring.hpp usb/xhci/registers.hpp \
+  message.hpp usb/xhci/trb.hpp task.hpp acpi.hpp syscall.hpp msr.hpp \
+  pci.hpp usb/xhci/xhci.hpp usb/xhci/ring.hpp usb/xhci/registers.hpp \
   usb/xhci/context.hpp usb/xhci/../memory.hpp \
   usb/xhci/../../memory_manager.hpp usb/xhci/devmgr.hpp \
   usb/xhci/device.hpp usb/xhci/../endpoint.hpp \
@@ -68,4 +68,4 @@ main.o: main.cpp \
   rtl8139/../network/tcp.hpp rtl8139/../network/../logging.hpp \
   rtl8139/../network/arp.hpp rtl8139/../network/network_lib.hpp \
   rtl8139/../network/../rtl8139/rtl8139.hpp ioapic.hpp \
-  network/network.hpp acpi.hpp
+  network/network.hpp

@@ -38,4 +38,4 @@ timer.o: timer.cpp timer.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
   interrupt.hpp /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/array \
-  asmfunc.h message.hpp task.hpp logging.hpp
+  asmfunc.h message.hpp usb/xhci/trb.hpp task.hpp acpi.hpp logging.hpp
