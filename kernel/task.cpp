@@ -19,6 +19,7 @@ namespace {
         while (1) __asm__("hlt");
     }
 
+    // 第一引数で指定したdequeから要素valueを消去する関数（必ずしもdequeである必要はない）
     template <class T, class U>
     void Erase(T& c, const U& value) {
         auto it = std::remove(c.begin(), c.end(), value);
@@ -190,7 +191,7 @@ int TaskManager::Sleep(uint64_t id)
 
 void TaskManager::Wakeup(Task *task, int level) 
 {
-    if (task->Running()) { // タスクがすでに起きているなら
+    if (task->Running()) { // タスクがすでに起きているならlevelの変更だけを行う
         ChangeLevelRunning(task, level);
         return;
     }

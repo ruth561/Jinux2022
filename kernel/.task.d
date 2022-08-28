@@ -37,7 +37,7 @@ task.o: task.cpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/deque message.hpp \
-  asmfunc.h segment.hpp x86_descriptor.hpp timer.hpp \
+  usb/xhci/trb.hpp asmfunc.h segment.hpp x86_descriptor.hpp timer.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/queue interrupt.hpp \
   logging.hpp memory_manager.hpp memory_map.hpp run_application.hpp \
   paging.hpp elf.hpp /home/ruth/osbook/devenv/x86_64-elf/include/elf.h

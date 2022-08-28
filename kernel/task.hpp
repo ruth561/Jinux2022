@@ -64,6 +64,7 @@ private:
     std::vector<uint64_t> stack_; // このタスクが使用するスタック領域。
     alignas(16) TaskContext context_; 
     std::deque<Message> msgs_;
+    
     int level_{kDefaultLevel}; // 実行優先度レベル
     bool running_{false}; // 実行状態・実行可能状態の時にtrueになる
 };

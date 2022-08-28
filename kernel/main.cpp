@@ -24,6 +24,7 @@
 #include "rtl8139/rtl8139.hpp"
 #include "ioapic.hpp"
 #include "network/network.hpp"
+#include "acpi.hpp"
 
 
 void Halt(void);
@@ -43,7 +44,8 @@ logging::Logger *logger;
 
 extern "C" void KernelMainNewStack(
     const FrameBufferConfig *frame_buffer_config_ref, 
-    const MemoryMap *memory_map_ref
+    const MemoryMap *memory_map_ref,
+    const acpi::RSDP *acpi_table
 )
 {
     // UEFIから間接的に呼ばれるので、引数で与えられたデータを
@@ -64,6 +66,9 @@ extern "C" void KernelMainNewStack(
 
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
     InitializeLocalAPICTimer(); // タイマの設定
+
+    acpi::Initialize(acpi_table);
+
     ioapic::Initialize();
 
     InitializeTask(); // マルチタスクの開始

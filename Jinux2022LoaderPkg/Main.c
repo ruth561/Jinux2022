@@ -9,6 +9,7 @@
 #include <Protocol/DiskIo2.h>
 #include <Protocol/BlockIo.h>
 #include <Guid/FileInfo.h>
+#include <Guid/Acpi.h>
 #include <elf.h>
 
 struct MemoryMap {
@@ -484,16 +485,26 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_tab
             Halt();
     }
 
-
+    /* ACPIテーブルへのポインタを探す */
+    VOID *acpi_table = NULL;
+    for (UINTN i = 0; i < system_table->NumberOfTableEntries; i++) {
+        if (CompareGuid(&gEfiAcpiTableGuid, 
+                        &system_table->ConfigurationTable[i].VendorGuid)) {
+            acpi_table = system_table->ConfigurationTable[i].VendorTable;
+            break;
+        }
+    }
+    
 
     /* エントリポイント用の関数のタイプを定義している */
     kernel_ehdr = (Elf64_Ehdr *) kernel_first_addr;
-    typedef void EntryPointType(struct FrameBufferConfig *, 
-                                struct MemoryMap*);
+    typedef void EntryPointType(struct FrameBufferConfig*, 
+                                struct MemoryMap*, 
+                                const VOID*);
     EntryPointType *entry_point = (EntryPointType *) kernel_ehdr->e_entry;
 
 
-    entry_point(&config, &map);
+    entry_point(&config, &map, acpi_table);
 
     while (1) asm("hlt");
     return EFI_SUCCESS;
