@@ -36,10 +36,29 @@ namespace acpi
         return true;
     }
 
+    bool DescriptionHeader::IsValid(const char* expected_signature) const {
+        if (strncmp(this->signature, expected_signature, 4) != 0) {
+            logger->error("Invalid Signature: %.4s\n", this->signature);
+            return false;
+        }
+        // checksum
+        uint8_t sum = 0;
+        const uint8_t *ptr = reinterpret_cast<const uint8_t *>(this);
+        for (int i = 0; i < this->length; i++) {
+            sum += ptr[i];
+        }
+        if (sum != 0) {
+            logger->error("Sum Of %u bytes Must Be 0: %d\n", this->length,  sum);
+            return false;
+        }
+        return true;
+    }
+
     void Initialize(const RSDP *rsdp)
     {
         logging::LoggingLevel current_level = logger->current_level();
         logger->set_level(logging::kDEBUG);
+        logger->debug("[ACPI] RSDP\n");
         logger->debug("[ACPI] Ptr: %p\n", rsdp);
         logger->debug("[ACPI] Signature: %c%c%c%c%c%c%c%c\n", 
             rsdp->signature[0], rsdp->signature[1], rsdp->signature[2], rsdp->signature[3], 
@@ -55,7 +74,33 @@ namespace acpi
         if (!rsdp->IsValid()) {
             return;
         }
-        logger->debug("RSDP Is Valid!\n");
+        logger->info("[ACPI] RSDP Is Valid!\n");
+
+
+        XSDT *xsdt = reinterpret_cast<XSDT *>(rsdp->xsdt_address);
+        logger->debug("[ACPI] XSDT\n");
+        logger->debug("[ACPI] Signature: %c%c%c%c\n", 
+            xsdt->header.signature[0], xsdt->header.signature[1], 
+            xsdt->header.signature[2], xsdt->header.signature[3]);
+        logger->debug("[ACPI] Length: %d\n", xsdt->header.length);
+        logger->debug("[ACPI] Revision: %d\n", xsdt->header.revision);
+        logger->debug("[ACPI] OEM: %c%c%c%c%c%c\n", 
+            xsdt->header.oem_id[0], xsdt->header.oem_id[1], 
+            xsdt->header.oem_id[2], xsdt->header.oem_id[3], 
+            xsdt->header.oem_id[4], xsdt->header.oem_id[5]);
+
+        if (!xsdt->header.IsValid("XSDT")) {
+            return;
+        }
+        logger->info("[ACPI] XSDT Is Valid!\n");
+
+        for (int i = 0; i < xsdt->Size(); i++) {
+            DescriptionHeader *entry = xsdt->entries[i];
+            if (entry->IsValid("FACP")) {
+                logger->debug("FACP!!\n");
+            }
+        }
+
         Halt();
 
         logger->set_level(current_level);
