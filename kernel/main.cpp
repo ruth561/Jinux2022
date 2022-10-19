@@ -67,6 +67,9 @@ extern "C" void KernelMainNewStack(
     SetupInterruptDescriptorTable(); // 割り込み・例外ハンドラの設定
 
     acpi::Initialize(acpi_table); // ACPIの設定
+
+    // Halt();
+
     InitializeLocalAPICTimer(); // タイマの設定
 
     ioapic::Initialize();
@@ -79,8 +82,11 @@ extern "C" void KernelMainNewStack(
     InitializePCI();
 
     Halt();
+    
     logger->set_level(logging::kDEBUG); // 出力減らす
     network::Initialize();
+
+    // Halt();
 
     usb::xhci::Initialize(); // xHCの初期化 
 

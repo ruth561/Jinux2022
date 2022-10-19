@@ -58,9 +58,44 @@ namespace acpi
         char reserved3[276 - 116];
     } __attribute__((packed));
 
+    // Multiple APIC Description Table
+    struct MADT {
+        DescriptionHeader header;
+        uint32_t lapic_address;
+        uint32_t flags;
+    } __attribute__((packed));
+    
+    struct MADTRecord {
+        uint8_t type;
+        uint8_t len;
+        uint8_t data[];
+    } __attribute__((packed));
+
+    enum MADTRecordType 
+    {
+        ProcessorLocalAPIC = 0,
+        IOAPIC = 1,
+        InterruptSourceOverride = 2
+    };
+
+    // MADTを解析して読み出してくれるクラス
+    class APICReader {
+    public:
+        APICReader(MADT *madt) : madt_{madt} {}
+
+        // 中身のデータを解析する
+        void Analyze();
+
+
+    private:
+        MADT *madt_;
+    };
+    
+
 
     const int kPMTimerFreq = 3579545;
-    extern const FADT* fadt;
+    extern FADT* fadt;
+    extern APICReader *apic_reader;
 
     // PMタイマーを用いてmsecミリ秒を測る
     void WaitMilliseconds(unsigned long msec);

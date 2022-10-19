@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Aug 28 15:28:52 2022
+# Make data base, printed on Wed Oct 19 09:44:38 2022
 
 # Variables
 
@@ -26,8 +26,6 @@ DESKTOP_SESSION = ubuntu
 XDG_SESSION_CLASS = user
 # environment
 XDG_SESSION_TYPE = x11
-# environment
-VSCODE_LOG_NATIVE = false
 # automatic
 ?D = $(patsubst %/,%,$(dir $?))
 # environment
@@ -45,11 +43,11 @@ CURDIR := /home/ruth/Documents/Jinux2022
 # makefile
 SHELL = /bin/sh
 # environment
-VSCODE_NLS_CONFIG = {"locale":"ja","availableLanguages":{"*":"ja"},"_languagePackId":"3cd3bd15e30fa0124a3f232cbca66525.ja","_translationsConfigFile":"/home/ruth/.config/Code/clp/3cd3bd15e30fa0124a3f232cbca66525.ja/tcf.json","_cacheRoot":"/home/ruth/.config/Code/clp/3cd3bd15e30fa0124a3f232cbca66525.ja","_resolvedLanguagePackCoreLocation":"/home/ruth/.config/Code/clp/3cd3bd15e30fa0124a3f232cbca66525.ja/30d9c6cd9483b2cc586687151bcbcd635f373630","_corruptedFile":"/home/ruth/.config/Code/clp/3cd3bd15e30fa0124a3f232cbca66525.ja/corrupted.info","_languagePackSupport":true}
+VSCODE_NLS_CONFIG = {"locale":"ja","availableLanguages":{"*":"ja"},"_languagePackId":"04aa7916830e492c43fed2ef0edd0889.ja","_translationsConfigFile":"/home/ruth/.config/Code/clp/04aa7916830e492c43fed2ef0edd0889.ja/tcf.json","_cacheRoot":"/home/ruth/.config/Code/clp/04aa7916830e492c43fed2ef0edd0889.ja","_resolvedLanguagePackCoreLocation":"/home/ruth/.config/Code/clp/04aa7916830e492c43fed2ef0edd0889.ja/d045a5eda657f4d7b676dedbfa7aab8207f8a075","_corruptedFile":"/home/ruth/.config/Code/clp/04aa7916830e492c43fed2ef0edd0889.ja/corrupted.info","_languagePackSupport":true}
 # environment
 _ = /usr/share/code/code
 # environment
-JOURNAL_STREAM = 8:84014
+JOURNAL_STREAM = 8:48582
 # environment
 XDG_CONFIG_DIRS = /etc/xdg/xdg-ubuntu:/etc/xdg
 # makefile
@@ -67,9 +65,7 @@ XDG_DATA_DIRS = /usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/d
 # environment
 DBUS_SESSION_BUS_ADDRESS = unix:path=/run/user/1000/bus
 # environment
-VSCODE_VERBOSE_LOGGING = true
-# environment
-MANAGERPID = 3535
+MANAGERPID = 1859
 # environment
 CLUTTER_IM_MODULE = fcitx
 # environment
@@ -83,17 +79,15 @@ PATH = /home/ruth/.local/bin:/opt/java/jdk-11.0.2/bin:/home/ruth/.local/bin:/usr
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/3796,unix/ruth-System-Product-Name:/tmp/.ICE-unix/3796
+SESSION_MANAGER = local/ruth-System-Product-Name:@/tmp/.ICE-unix/2116,unix/ruth-System-Product-Name:/tmp/.ICE-unix/2116
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
 XDG_MENU_PREFIX = gnome-
 # environment
-VSCODE_LOG_STACK = false
-# environment
 ELECTRON_RUN_AS_NODE = 1
 # environment
-INVOCATION_ID = 293916c7f2144d0f9820377a16c89ac1
+INVOCATION_ID = 651a7feeee9f44d0b6d9bd12378ff8a0
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -103,7 +97,7 @@ XDG_SESSION_DESKTOP = ubuntu
 # environment
 SSH_AUTH_SOCK = /run/user/1000/keyring/ssh
 # environment
-GIO_LAUNCHED_DESKTOP_FILE_PID = 4548
+GIO_LAUNCHED_DESKTOP_FILE_PID = 2505
 # automatic
 %F = $(notdir $%)
 # environment
@@ -111,13 +105,11 @@ DISPLAY = :0
 # environment
 GTK_IM_MODULE = fcitx
 # environment
-VSCODE_PIPE_LOGGING = true
-# environment
 PWD = /home/ruth/Documents/Jinux2022
 # default
 .LOADED := 
 # environment
-SSH_AGENT_PID = 3731
+SSH_AGENT_PID = 2051
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = ubuntu:GNOME
 # environment
@@ -129,7 +121,7 @@ HOME = /home/ruth
 # environment
 LESSCLOSE = /usr/bin/lesspipe %s %s
 # environment
-VSCODE_CODE_CACHE_PATH = /home/ruth/.config/Code/CachedData/30d9c6cd9483b2cc586687151bcbcd635f373630
+VSCODE_CODE_CACHE_PATH = /home/ruth/.config/Code/CachedData/d045a5eda657f4d7b676dedbfa7aab8207f8a075
 # environment
 LOGNAME = ruth
 # environment
@@ -152,8 +144,6 @@ QT_IM_MODULE = fcitx
 SHLVL = 0
 # environment
 GNOME_SHELL_SESSION_MODE = ubuntu
-# environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-d01e9352-1da1-4acd-b703-90883067676d.sock
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -171,7 +161,7 @@ MAKE_COMMAND := make
 # automatic
 *F = $(notdir $*)
 # environment
-VSCODE_IPC_HOOK = /run/user/1000/vscode-11774132-1.68.1-main.sock
+VSCODE_IPC_HOOK = /run/user/1000/vscode-11774132-1.72.2-main.sock
 # environment
 PYTHONPATH = /home/ruth/.local/lib/python3.8/site-packages
 # makefile
@@ -219,9 +209,9 @@ GJS_DEBUG_OUTPUT = stderr
 # environment
 LANG = C
 # environment
-VSCODE_PID = 4548
+VSCODE_PID = 2505
 # variable set hash-table stats:
-# Load=104/1024=10%, Rehash=0, Collisions=13/126=10%
+# Load=99/1024=10%, Rehash=0, Collisions=12/121=10%
 
 # Pattern-specific Variable Values
 
@@ -229,9 +219,9 @@ VSCODE_PID = 4548
 
 # Directories
 
-# . (device 66306, inode 18743501): 17 files, no impossibilities.
+# . (device 66306, inode 18743501): 18 files, no impossibilities.
 
-# 17 files, no impossibilities in 1 directories.
+# 18 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -281,13 +271,12 @@ GNUmakefile:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 25 / storage = 215 B / avg = 8 B
- 
-# current buf: size = 8162 B / used = 215 B / count = 25 / avg = 8 B
+# strcache buffers: 1 (0) / strings = 26 / storage = 228 B / avg = 8 B
+# current buf: size = 8162 B / used = 228 B / count = 26 / avg = 8 B
 
-# strcache performance: lookups = 28 / hit rate = 10%
+# strcache performance: lookups = 29 / hit rate = 10%
 # hash-table stats:
-# Load=25/8192=0%, Rehash=0, Collisions=1/28=4%
-# Finished Make data base on Sun Aug 28 15:28:52 2022
+# Load=26/8192=0%, Rehash=0, Collisions=1/29=3%
+# Finished Make data base on Wed Oct 19 09:44:38 2022
 
  

@@ -83,19 +83,19 @@ namespace rtl8139
         }
         current_tx_buffer_ = 0;
 
-        /* // 全ての割り込みを許可する
+        // 全ての割り込みを許可する
         logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
         opt_->interrupt_mask_register.bits.receive_ok_interupt = true;
-        opt_->interrupt_mask_register.bits.receive_error_interrupt = true;
+        // opt_->interrupt_mask_register.bits.receive_error_interrupt = true;
         opt_->interrupt_mask_register.bits.transmit_ok_interupt = true;
-        opt_->interrupt_mask_register.bits.transmit_error_interupt = true;
+        /* opt_->interrupt_mask_register.bits.transmit_error_interupt = true;
         opt_->interrupt_mask_register.bits.rx_buffer_overflow_interrupt = true;
         opt_->interrupt_mask_register.bits.rx_fifo_overflow_interrupt = true;
         opt_->interrupt_mask_register.bits.packet_underrun_link_change_interupt = true;
         opt_->interrupt_mask_register.bits.cable_length_change_interupt = true;
         opt_->interrupt_mask_register.bits.timeout_interupt = true;
-        opt_->interrupt_mask_register.bits.system_error_interupt = true;
-        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data); */
+        opt_->interrupt_mask_register.bits.system_error_interupt = true; */
+        logger->debug("Interrupt Mask Register: 0x%04hx\n", opt_->interrupt_mask_register.data);
 
         // パケットの受け取りを開始する
         opt_->command_register.bits.receiver_enable = 1;
@@ -211,6 +211,11 @@ namespace rtl8139
             return nullptr;
         }
         uint32_t mmio_base = data & ~0xffu;
+        
+        data = pci::ConfigRead32(rtl8139_dev->bus, rtl8139_dev->device, rtl8139_dev->function, 0x3c);
+        uint8_t interrupt_line = static_cast<uint8_t>(data & 0xffu);
+        logger->debug("%08x\n", data);
+        logger->debug("Interrupt Line: %d\n", interrupt_line);
         // logger->debug("mmio_base: 0x%x\n", mmio_base);
 
         return new Controller{mmio_base};
