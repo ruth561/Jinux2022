@@ -23,11 +23,29 @@ Console::Console(
             writer_->Write(x, y, &bg_color_);
         }
     }
+    Activate();
 }
 
+void Console::Activate()
+{
+    active = true;
+}
+
+void Console::Deactivate()
+{
+    active = false;
+}
+
+bool Console::IsActive()
+{
+    return active;
+}
 
 void Console::PutString(const char *s)
 {
+    if (!IsActive()) {
+        return;
+    }
     __asm__("cli");
     while (*s) {
         if (*s == '\n') {

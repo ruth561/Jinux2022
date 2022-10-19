@@ -58,7 +58,8 @@ extern "C" void KernelMainNewStack(
     printk("Hello, JINUX!\n\n");
     logger = new(logger_buf) logging::Logger();
     logger->set_level(logging::kERROR); // ログレベルの変更・設定
-
+    console->Deactivate(); // コンソール出力を抑制する
+    
     SetupSegments(); // UEFIの設定を更新し直す
     SetupIdentityPageTable(); // ページングの設定
     InitializeMemoryManager(memory_map); // メモリ管理の開始
@@ -82,7 +83,7 @@ extern "C" void KernelMainNewStack(
     InitializePCI();
 
     Halt();
-    
+
     logger->set_level(logging::kDEBUG); // 出力減らす
     network::Initialize();
 

@@ -20,6 +20,12 @@ public:
         const PixelColor *fg_color, 
         const PixelColor *bg_color);
     
+    // activeメンバ変数の値を変更させる
+    void Activate();
+    void Deactivate();
+
+    bool IsActive();
+
     // 現在のカーソル位置から文字列を出力する。
     // 列数より飛び出る場合は出力しない。
     // 改行マークの時は、新しい行にカーソルが移動する。
@@ -35,6 +41,10 @@ private:
     const PixelColor fg_color_, bg_color_;
     char buffer_[kRows][kColumns + 1];          // kColumns + 1なのは最後のNULL文字のため
     int cursor_row_, cursor_column_;
+
+    // コンソールはデバッグなどに用いるが、ターミナルなどを起動した後は画面出力をしてほしくないので、
+    // active == 0の時は処理を特にしないようにする。
+    bool active{0};
 };
 
 void InitializeConsole();
