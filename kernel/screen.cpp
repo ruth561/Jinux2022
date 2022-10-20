@@ -87,6 +87,21 @@ ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &defaul
     long_frame_ = new Frame{long_frame_config};
     long_frame_rows_ = long_frame_->VerticalResolution() / 16;
     long_frame_cols_ = long_frame_->HolizontalResolution() / 8;
+
+    // フレームの位置やカーソルの位置を初期化
+    base_ = 0;
+    cursor_col_ = 0;
+    cursor_row_ = 0;
+    long_frame_end_ = 0;
+    // ロングフレームの最初をバックグラウンドカラーで埋める
+    for (int c_y = 0; c_y < frame_rows_; c_y++) {
+        FillLine(c_y, default_bg_color_);
+        long_frame_end_++;
+    }
+
+    // フレームに反映
+    CopyAll();
+    CursorShow();
 }
 
 
@@ -150,6 +165,16 @@ void ScreenManager::WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharD
      * 文字は縦16ピクセル、横8ピクセルなので文字を置く領域の左上のアドレスは
      */
     long_frame_->WriteChar(c_x * 8, c_y * 16, c_data);
+}
+
+void ScreenManager::FillLine(uint32_t c_y, PixelColor &color)
+{
+    CharData c_data;
+    c_data.val = ' ';
+    c_data.bg_color = color;
+    for (int c_x = 0; c_x < frame_cols_; c_x++) {
+        WriteCharToLongFrame(c_x, c_y, c_data);
+    }
 }
 
 void ScreenManager::PutChar(const CharData &c_data)
@@ -235,26 +260,27 @@ void ScreenInit(const FrameBufferConfig *config)
     PixelColor bg_color = PixelColor{0xff, 0xff, 0xff};
 
     ScreenManager *screen_manager = new ScreenManager(config, fg_color, bg_color);
-    printk("long frame buffer: %p\n", screen_manager->LongFramePtr()->Buffer());
+    /* printk("long frame buffer: %p\n", screen_manager->LongFramePtr()->Buffer());
     printk("frame buffer  %p\n", screen_manager->FramePtr()->Buffer());
 
     printk("(long) holizontal: %d\n", screen_manager->LongFramePtr()->Config()->holizontal_resolution);
     printk("(long) vertical: %d\n", screen_manager->LongFramePtr()->Config()->vertical_resolution);
 
     printk("holizontal: %d\n", screen_manager->FramePtr()->Config()->holizontal_resolution);
-    printk("vertical: %d\n", screen_manager->FramePtr()->Config()->vertical_resolution);
+    printk("vertical: %d\n", screen_manager->FramePtr()->Config()->vertical_resolution); */
 
-    CharData c_data;
+    /* CharData c_data;
     c_data.val = 'A';
     c_data.fg_color = {0x00, 0x00, 0xff};
     c_data.bg_color = {0xff, 0xff, 0xff};
     screen_manager->PutChar(c_data);
 
 
-    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n"); */
 
-    for (int i = 0; i < 3; i++) {
+    // screen_manager->CopyAll();
+    /* for (int i = 0; i < 3; i++) {
         screen_manager->Scroll();
-    }
+    } */
     
 }

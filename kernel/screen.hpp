@@ -73,6 +73,9 @@ public:
     void PutString(const char *s); // 色はデフォルトのものを使う
     // 画面の移動をする
     void Scroll(bool reverse = false); // reverse=trueの時は上に移動する
+
+    // フレームへロングフレームバッファのデータを全体にコピーする。
+    void CopyAll();
 private:
     Frame *frame_; // 画面に出力する部分のフレーム
     Frame *long_frame_; // これまでの出力結果なども保存してある巨大なフレーム
@@ -81,6 +84,8 @@ private:
     uint32_t frame_cols_; // フレームの列数（文字）
     uint32_t long_frame_rows_; // ロングフレームの行数（文字）
     uint32_t long_frame_cols_; // ロングフレームの列数（文字）
+
+    uint32_t long_frame_end_; // ロングフレームで背景色を埋めたライン
 
     uint32_t base_{0}; // ロングフレームにおけるフレームの位置
     uint32_t cursor_row_{0}; // カーソル位置（ロングフレーム・行）
@@ -96,10 +101,11 @@ private:
     void CopyChar(uint32_t c_x, uint32_t c_y);
     // 現在のカーソル位置にカーソルを表示する。色は指定できる。
     void CursorShow();
+    // 指定したロングフレームの行c_yをデフォルトのバックグラウンドカラーで塗りつぶす
+    void FillLine(uint32_t c_y, PixelColor &color);
     // 第c_y行目の文字列をコピーする。
     void CopyLine(uint32_t c_y);
-    // フレームへロングフレームバッファのデータを全体にコピーする。
-    void CopyAll();
+
 };
 
 
