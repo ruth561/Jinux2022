@@ -4,13 +4,7 @@
 
 #include "graphics.hpp"
 #include "font.hpp"
-
-// ターミナルの一文字が持つデータ
-struct CharData {
-    char val; // 文字
-    PixelColor fg_color; // 文字色
-    PixelColor bg_color; // 背景色
-};
+#include "screen.hpp"
 
 class Terminal
 {

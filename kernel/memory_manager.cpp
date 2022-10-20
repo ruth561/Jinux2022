@@ -123,7 +123,7 @@ extern "C" caddr_t program_break, program_break_end;
 
 int InitializeHeap(BitmapMemoryManager *memory_manager)
 {
-    const int kHeapFrames = 64 * 512;   // ヒープ領域に使うカーネルのメモリ領域の大きさ（KiB）
+    const int kHeapFrames = 128 * 512;   // ヒープ領域に使うカーネルのメモリ領域の大きさ（KiB）
     const FrameID heap_start = memory_manager->Allocate(kHeapFrames); // 連続した空き領域を確保する。
 
     if (heap_start.ID() == kNullFrame.ID()) {  // 確保に失敗した時

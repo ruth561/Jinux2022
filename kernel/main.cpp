@@ -25,7 +25,7 @@
 #include "ioapic.hpp"
 #include "network/network.hpp"
 #include "acpi.hpp"
-
+#include "screen.hpp"
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -58,8 +58,9 @@ extern "C" void KernelMainNewStack(
     printk("Hello, JINUX!\n\n");
     logger = new(logger_buf) logging::Logger();
     logger->set_level(logging::kERROR); // ログレベルの変更・設定
-    console->Deactivate(); // コンソール出力を抑制する
-    
+
+    // console->Deactivate(); // コンソール出力を抑制する
+
     SetupSegments(); // UEFIの設定を更新し直す
     SetupIdentityPageTable(); // ページングの設定
     InitializeMemoryManager(memory_map); // メモリ管理の開始
@@ -82,6 +83,8 @@ extern "C" void KernelMainNewStack(
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
 
+    console->Activate();
+    ScreenInit(&frame_buffer_config);
     Halt();
 
     logger->set_level(logging::kDEBUG); // 出力減らす
