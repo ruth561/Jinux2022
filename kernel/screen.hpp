@@ -71,6 +71,8 @@ public:
     // 文字列を出力する。文字色と背景色を指定できる。
     void PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color);
     void PutString(const char *s); // 色はデフォルトのものを使う
+    // 画面の移動をする
+    void Scroll(bool reverse = false); // reverse=trueの時は上に移動する
 private:
     Frame *frame_; // 画面に出力する部分のフレーム
     Frame *long_frame_; // これまでの出力結果なども保存してある巨大なフレーム

@@ -199,6 +199,25 @@ void ScreenManager::PutString(const char *s)
     PutString(s, default_fg_color_, default_bg_color_);
 }
 
+void ScreenManager::Scroll(bool reverse)
+{
+    if (reverse) {
+        // 上にスクロール
+        if (base_ > 0) {
+            base_--;
+            CopyAll();
+        } 
+    } else {
+        // 下へスクロール
+        // カーソルより下へはスクロールしない
+        if (base_ < cursor_row_) {
+            base_++;
+            CopyAll();
+        }
+    }
+    CursorShow();
+}
+
 void ScreenManager::CursorShow()
 {
     uint32_t c_x = cursor_col_;
@@ -234,6 +253,8 @@ void ScreenInit(const FrameBufferConfig *config)
 
     screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
 
-    
+    for (int i = 0; i < 3; i++) {
+        screen_manager->Scroll();
+    }
     
 }
