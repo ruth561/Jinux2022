@@ -156,6 +156,7 @@ void ScreenManager::PutChar(const CharData &c_data)
 {
     if (c_data.val == '\n') {
         // 改行を出力する時は行を変える
+        CopyChar(cursor_col_, cursor_row_);
         cursor_col_ = 0;
         cursor_row_++;
     } else {
@@ -233,6 +234,6 @@ void ScreenInit(const FrameBufferConfig *config)
 
     screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
 
-
+    
     
 }
