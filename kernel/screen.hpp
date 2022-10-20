@@ -60,20 +60,17 @@ class ScreenManager
 public:
     static const int kBufferSize = 20; // buffer_はFrameのkBufferSize枚数分の領域を確保する
 
-    ScreenManager(const FrameBufferConfig *config);
+    ScreenManager(const FrameBufferConfig *config, PixelColor &default_fg_color, PixelColor &default_bg_color);
     Frame *LongFramePtr() { return long_frame_; }
     Frame *FramePtr() { return frame_; }
 
-    // 第c_y行目の文字列をコピーする。
-    void CopyLine(uint32_t c_y);
-    // フレームへロングフレームバッファのデータを全体にコピーする。
-    void CopyAll();
     
     // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
     void PutChar(const CharData &c_data);
+    void PutChar(char c); // 色はデフォルトのものを使う
     // 文字列を出力する。文字色と背景色を指定できる。
-    void PutString(const char *s, PixelColor *fg_color, PixelColor *bg_color);
-
+    void PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color);
+    void PutString(const char *s); // 色はデフォルトのものを使う
 private:
     Frame *frame_; // 画面に出力する部分のフレーム
     Frame *long_frame_; // これまでの出力結果なども保存してある巨大なフレーム
@@ -84,14 +81,23 @@ private:
     uint32_t long_frame_cols_; // ロングフレームの列数（文字）
 
     uint32_t base_{0}; // ロングフレームにおけるフレームの位置
-    uint32_t cursol_row_{0}; // カーソル位置（ロングフレーム・行）
-    uint32_t cursol_col_{0}; // カーソル位置（ロングフレーム・列）
+    uint32_t cursor_row_{0}; // カーソル位置（ロングフレーム・行）
+    uint32_t cursor_col_{0}; // カーソル位置（ロングフレーム・列）
+
+    PixelColor default_fg_color_;
+    PixelColor default_bg_color_;
 
     // ロングフレームの(c_x, c_y)に文字を書き込む。(c_x, c_y)はピクセルではなく文字の行と列である。
     void WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharData &c_data);
     // ロングフレームの(c_x, c_y)にある文字をフレームに書き込む。
     // 書き込む先がフレーム内でなければ何もしない。
     void CopyChar(uint32_t c_x, uint32_t c_y);
+    // 現在のカーソル位置にカーソルを表示する。色は指定できる。
+    void CursorShow();
+    // 第c_y行目の文字列をコピーする。
+    void CopyLine(uint32_t c_y);
+    // フレームへロングフレームバッファのデータを全体にコピーする。
+    void CopyAll();
 };
 
 

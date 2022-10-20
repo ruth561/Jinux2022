@@ -57,7 +57,21 @@ void Frame::WriteChar(uint32_t p_x, uint32_t p_y, const CharData &c_data)
     }
 }
 
-ScreenManager::ScreenManager(const FrameBufferConfig *config) 
+
+/* =============================================================================================================================
+ *
+ *
+ * 
+ * 
+ * 
+ * 
+ * 
+ * =============================================================================================================================
+ */
+
+
+ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &default_fg_color, PixelColor &default_bg_color) :
+    default_fg_color_{default_fg_color}, default_bg_color_{default_bg_color}
 {
     frame_ = new Frame{config};
     frame_rows_ = frame_->VerticalResolution() / 16;
@@ -142,26 +156,36 @@ void ScreenManager::PutChar(const CharData &c_data)
 {
     if (c_data.val == '\n') {
         // 改行を出力する時は行を変える
-        cursol_col_ = 0;
-        cursol_row_++;
+        cursor_col_ = 0;
+        cursor_row_++;
     } else {
-        WriteCharToLongFrame(cursol_col_, cursol_row_, c_data);
-        CopyChar(cursol_col_, cursol_row_);
+        WriteCharToLongFrame(cursor_col_, cursor_row_, c_data);
+        CopyChar(cursor_col_, cursor_row_);
 
-        cursol_col_++;
-        if (cursol_col_ >= long_frame_cols_) {
+        cursor_col_++;
+        if (cursor_col_ >= long_frame_cols_) {
             // カーソルが画面の右端に到達したら行を変える
-            cursol_col_ = 0;
-            cursol_row_++;
+            cursor_col_ = 0;
+            cursor_row_++;
         }
     }
+    CursorShow();
 }
 
-void ScreenManager::PutString(const char *s, PixelColor *fg_color, PixelColor *bg_color)
+void ScreenManager::PutChar(char c)
 {
     CharData c_data;
-    c_data.fg_color = *fg_color;
-    c_data.bg_color = *bg_color;
+    c_data.val = c;
+    c_data.fg_color = default_fg_color_;
+    c_data.bg_color = default_bg_color_;
+    PutChar(c_data);
+}
+
+void ScreenManager::PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color)
+{
+    CharData c_data;
+    c_data.fg_color = fg_color;
+    c_data.bg_color = bg_color;
     while (*s) { // NULL文字に当たるまで出力し続ける
         c_data.val = *s;
         PutChar(c_data);
@@ -169,11 +193,28 @@ void ScreenManager::PutString(const char *s, PixelColor *fg_color, PixelColor *b
     }
 }
 
+void ScreenManager::PutString(const char *s)
+{
+    PutString(s, default_fg_color_, default_bg_color_);
+}
 
+void ScreenManager::CursorShow()
+{
+    uint32_t c_x = cursor_col_;
+    uint32_t c_y = cursor_row_ - base_;
+    for (int dx = 0; dx < 8; dx++) {
+        for (int dy = 0; dy < 16; dy++) {
+            frame_->PixelWrite(c_x * 8 + dx, c_y * 16 + dy, default_fg_color_);
+        }
+    }
+}
 
 void ScreenInit(const FrameBufferConfig *config)
 {
-    ScreenManager *screen_manager = new ScreenManager(config);
+    PixelColor fg_color = PixelColor{0x00, 0x00, 0x00};
+    PixelColor bg_color = PixelColor{0xff, 0xff, 0xff};
+
+    ScreenManager *screen_manager = new ScreenManager(config, fg_color, bg_color);
     printk("long frame buffer: %p\n", screen_manager->LongFramePtr()->Buffer());
     printk("frame buffer  %p\n", screen_manager->FramePtr()->Buffer());
 
@@ -189,15 +230,9 @@ void ScreenInit(const FrameBufferConfig *config)
     c_data.bg_color = {0xff, 0xff, 0xff};
     screen_manager->PutChar(c_data);
 
-    PixelColor fg_color = PixelColor{0x00, 0x00, 0x00};
-    PixelColor bg_color = PixelColor{0xff, 0xff, 0xff};
 
-    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n", 
-        &fg_color, &bg_color);
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
 
-    screen_manager->CopyLine(0);
-
-    screen_manager->CopyAll();
 
     
 }
