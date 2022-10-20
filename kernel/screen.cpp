@@ -60,6 +60,8 @@ void Frame::WriteChar(uint32_t p_x, uint32_t p_y, const CharData &c_data)
 ScreenManager::ScreenManager(const FrameBufferConfig *config) 
 {
     frame_ = new Frame{config};
+    frame_rows_ = frame_->VerticalResolution() / 16;
+    frame_cols_ = frame_->HolizontalResolution() / 8;
 
     FrameBufferConfig *long_frame_config = new FrameBufferConfig {
         (uint8_t *) malloc(4 * config->holizontal_resolution * config->vertical_resolution * kBufferSize), 
@@ -69,6 +71,8 @@ ScreenManager::ScreenManager(const FrameBufferConfig *config)
         config->pixel_format
     };
     long_frame_ = new Frame{long_frame_config};
+    long_frame_rows_ = long_frame_->VerticalResolution() / 16;
+    long_frame_cols_ = long_frame_->HolizontalResolution() / 8;
 }
 
 
@@ -113,10 +117,17 @@ void ScreenManager::CopyLine(uint32_t c_y)
         memcpy(
             frame_->PixelAt(0, 16 * dst_y + i), 
             long_frame_->PixelAt(0, 16 * src_y + i), 
-            BYTES_PER_PIXEL * frame_->HolizontalResolution()
+            BYTES_PER_PIXEL * frame_cols_ * 8
         );
     }
     return;
+}
+
+void ScreenManager::CopyAll()
+{
+    for (int row = 0; row < frame_rows_; row++) {
+        CopyLine(base_ + row);
+    }
 }
 
 void ScreenManager::WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharData &c_data)
@@ -125,9 +136,38 @@ void ScreenManager::WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharD
      * 文字は縦16ピクセル、横8ピクセルなので文字を置く領域の左上のアドレスは
      */
     long_frame_->WriteChar(c_x * 8, c_y * 16, c_data);
-
 }
 
+void ScreenManager::PutChar(const CharData &c_data)
+{
+    if (c_data.val == '\n') {
+        // 改行を出力する時は行を変える
+        cursol_col_ = 0;
+        cursol_row_++;
+    } else {
+        WriteCharToLongFrame(cursol_col_, cursol_row_, c_data);
+        CopyChar(cursol_col_, cursol_row_);
+
+        cursol_col_++;
+        if (cursol_col_ >= long_frame_cols_) {
+            // カーソルが画面の右端に到達したら行を変える
+            cursol_col_ = 0;
+            cursol_row_++;
+        }
+    }
+}
+
+void ScreenManager::PutString(const char *s, PixelColor *fg_color, PixelColor *bg_color)
+{
+    CharData c_data;
+    c_data.fg_color = *fg_color;
+    c_data.bg_color = *bg_color;
+    while (*s) { // NULL文字に当たるまで出力し続ける
+        c_data.val = *s;
+        PutChar(c_data);
+        s++;
+    }
+}
 
 
 
@@ -147,9 +187,17 @@ void ScreenInit(const FrameBufferConfig *config)
     c_data.val = 'A';
     c_data.fg_color = {0x00, 0x00, 0xff};
     c_data.bg_color = {0xff, 0xff, 0xff};
-    screen_manager->WriteCharToLongFrame(0, 0, c_data);
-    screen_manager->CopyChar(0, 0);
+    screen_manager->PutChar(c_data);
+
+    PixelColor fg_color = PixelColor{0x00, 0x00, 0x00};
+    PixelColor bg_color = PixelColor{0xff, 0xff, 0xff};
+
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n", 
+        &fg_color, &bg_color);
 
     screen_manager->CopyLine(0);
+
+    screen_manager->CopyAll();
+
     
 }
