@@ -17,7 +17,6 @@ public:
 
 private:
     ScreenManager *screen_manager_;
-
 };
 
 

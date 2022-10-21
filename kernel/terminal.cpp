@@ -47,6 +47,12 @@ namespace
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" // 70~79 
                       "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";// 80~89 
 
+    #define HID_KC_ESC 0x29
+    #define HID_KC_BACK_SPACE 0x2a
+    #define HID_KC_RIGHT 0x4f
+    #define HID_KC_LEFT 0x50
+    #define HID_KC_DOWN 0x51
+    #define HID_KC_UP 0x52
 
 }
 
@@ -54,7 +60,25 @@ namespace
 
 void Terminal::OnKeyStroke(uint8_t *keys)
 {
-    screen_manager_->PutString("Hello, World! ");
+    ModifierKey modifier_key{keys[0]};
+
+    char *key_code_list = kKeyCord;
+    if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
+        key_code_list = kKeyCordShift;
+    }
+    
+    for (int i = 2; i < 8; i++) {
+        if (keys[i] < sizeof(kKeyCord)) {
+            char k = keys[i]; // キーコード
+            
+
+            char c = key_code_list[k]; // ASCII文字
+            if (c) {
+                // 対応するASCII文字があれば出力しておく
+                screen_manager_->PutChar(c);
+            }
+        }
+    }
 }
 
 void RunTerminal(const FrameBufferConfig *config)
