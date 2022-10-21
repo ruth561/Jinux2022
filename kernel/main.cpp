@@ -59,7 +59,7 @@ extern "C" void KernelMainNewStack(
     logger = new(logger_buf) logging::Logger();
     logger->set_level(logging::kERROR); // ログレベルの変更・設定
 
-    // console->Deactivate(); // コンソール出力を抑制する
+    console->Deactivate(); // コンソール出力を抑制する
 
     SetupSegments(); // UEFIの設定を更新し直す
     SetupIdentityPageTable(); // ページングの設定
@@ -83,7 +83,7 @@ extern "C" void KernelMainNewStack(
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
 
-    console->Activate();
+    // console->Activate();
     ScreenInit(&frame_buffer_config);
     Halt();
 

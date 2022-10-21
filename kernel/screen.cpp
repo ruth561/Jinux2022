@@ -88,6 +88,12 @@ ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &defaul
     long_frame_rows_ = long_frame_->VerticalResolution() / 16;
     long_frame_cols_ = long_frame_->HolizontalResolution() / 8;
 
+    // フレームの背景をデフォルトの色で塗りつぶす
+    for (uint32_t p_x = 0; p_x < frame_->HolizontalResolution(); p_x++) {
+        for (uint32_t p_y = 0; p_y < frame_->VerticalResolution(); p_y++) {
+            frame_->PixelWrite(p_x, p_y, default_bg_color_);
+        }
+    }
     // フレームの位置やカーソルの位置を初期化
     base_ = 0;
     cursor_col_ = 0;
@@ -103,6 +109,13 @@ ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &defaul
     CopyAll();
     CursorShow();
 }
+
+bool ScreenManager::IsCursorInFrame()
+{
+    return (0 <= cursor_row_ - base_) && \
+           (cursor_row_ - base_ < frame_rows_);
+}
+
 
 
 void ScreenManager::CopyChar(uint32_t c_x, uint32_t c_y) {
@@ -155,6 +168,10 @@ void ScreenManager::CopyLine(uint32_t c_y)
 void ScreenManager::CopyAll()
 {
     for (int row = 0; row < frame_rows_; row++) {
+        if (base_ + row >= long_frame_end_) {
+            FillLine(base_ + row, default_bg_color_);
+            long_frame_end_ = base_ + row + 1;
+        }
         CopyLine(base_ + row);
     }
 }
@@ -194,6 +211,10 @@ void ScreenManager::PutChar(const CharData &c_data)
             cursor_col_ = 0;
             cursor_row_++;
         }
+    }
+    if (!IsCursorInFrame()) {
+        // カーソル外に飛び出した場合は、下にスクロールする
+        Scroll();
     }
     CursorShow();
 }
@@ -269,14 +290,21 @@ void ScreenInit(const FrameBufferConfig *config)
     printk("holizontal: %d\n", screen_manager->FramePtr()->Config()->holizontal_resolution);
     printk("vertical: %d\n", screen_manager->FramePtr()->Config()->vertical_resolution); */
 
-    /* CharData c_data;
+    CharData c_data;
     c_data.val = 'A';
     c_data.fg_color = {0x00, 0x00, 0xff};
     c_data.bg_color = {0xff, 0xff, 0xff};
     screen_manager->PutChar(c_data);
 
 
-    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n"); */
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+
+
 
     // screen_manager->CopyAll();
     /* for (int i = 0; i < 3; i++) {

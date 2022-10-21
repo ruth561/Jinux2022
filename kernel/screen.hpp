@@ -64,6 +64,10 @@ public:
     Frame *LongFramePtr() { return long_frame_; }
     Frame *FramePtr() { return frame_; }
 
+    // 現在のカーソルがフレーム内にいればtrueを返す
+    bool IsCursorInFrame();
+    // カーソルが見える位置に行くまでフレームを移動する。
+    // void MoveFrameToCursor();
     
     // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
     void PutChar(const CharData &c_data);
@@ -85,7 +89,7 @@ private:
     uint32_t long_frame_rows_; // ロングフレームの行数（文字）
     uint32_t long_frame_cols_; // ロングフレームの列数（文字）
 
-    uint32_t long_frame_end_; // ロングフレームで背景色を埋めたライン
+    uint32_t long_frame_end_; // ロングフレームで背景色を埋めたライン(0<= row < long_frame_end_の範囲だけ背景が塗りつぶされているので、スクロール時など注意)
 
     uint32_t base_{0}; // ロングフレームにおけるフレームの位置
     uint32_t cursor_row_{0}; // カーソル位置（ロングフレーム・行）
