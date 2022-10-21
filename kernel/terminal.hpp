@@ -10,9 +10,14 @@ class Terminal
 public:
     Terminal(ScreenManager *screen_manager) :
         screen_manager_{screen_manager} {}
+    
+    // キー入力があった時に非同期で実行される。
+    // USBキーボードのキー入力処理から呼ばれる。
+    void OnKeyStroke(uint8_t *keys);
 
 private:
     ScreenManager *screen_manager_;
+
 };
 
 

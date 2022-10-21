@@ -84,16 +84,16 @@ extern "C" void KernelMainNewStack(
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
 
-    // console->Activate();
-    RunTerminal(&frame_buffer_config);
-    Halt();
+    console->Activate();
 
     logger->set_level(logging::kDEBUG); // 出力減らす
-    network::Initialize();
+    // network::Initialize();
 
     // Halt();
 
     usb::xhci::Initialize(); // xHCの初期化 
+
+    RunTerminal(&frame_buffer_config);
 
     // logger->set_level(logging::kINFO); // 文字出力を制限
     /* task_manager->NewTask()

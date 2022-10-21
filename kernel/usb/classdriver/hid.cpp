@@ -5,6 +5,7 @@
 #include "../../timer.hpp"
 extern logging::Logger *logger;
 extern TimerManager *timer_manager;
+extern Terminal *terminal;
 void Halt(); 
 
 namespace
@@ -79,6 +80,11 @@ namespace
     // キーを出力する
     void PrintKeys(uint8_t *keys) 
     {
+        if (terminal) {
+            // ターミナルが起動していれば、ターミナルに文字を送ってあげる。
+            terminal->OnKeyStroke(keys);
+            return;
+        }
         ModifierKey modifier_key{keys[0]};
         char key[2] = {0, 0};
 

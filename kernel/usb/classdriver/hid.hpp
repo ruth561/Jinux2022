@@ -3,6 +3,7 @@
 #include "../device.hpp"
 #include "../endpoint.hpp"
 #include "../setupdata.hpp"
+#include "../../terminal.hpp"
 #include "base.hpp"
 
 namespace usb

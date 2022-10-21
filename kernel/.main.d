@@ -60,6 +60,7 @@ main.o: main.cpp \
   usb/xhci/../classdriver/../endpoint.hpp \
   usb/xhci/../classdriver/../setupdata.hpp \
   usb/xhci/../classdriver/hid.hpp usb/xhci/../classdriver/../device.hpp \
+  usb/xhci/../classdriver/../../terminal.hpp screen.hpp \
   usb/xhci/../../logging.hpp usb/xhci/port.hpp usb/xhci/../../pci.hpp \
   usb/xhci/../../task.hpp rtl8139/rtl8139.hpp rtl8139/../pci.hpp \
   rtl8139/../logging.hpp rtl8139/registers.hpp rtl8139/packet.hpp \
@@ -68,4 +69,4 @@ main.o: main.cpp \
   rtl8139/../network/tcp.hpp rtl8139/../network/../logging.hpp \
   rtl8139/../network/arp.hpp rtl8139/../network/network_lib.hpp \
   rtl8139/../network/../rtl8139/rtl8139.hpp ioapic.hpp \
-  network/network.hpp screen.hpp terminal.hpp
+  network/network.hpp terminal.hpp
