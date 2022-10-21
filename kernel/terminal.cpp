@@ -69,8 +69,21 @@ void Terminal::OnKeyStroke(uint8_t *keys)
     
     for (int i = 2; i < 8; i++) {
         if (keys[i] < sizeof(kKeyCord)) {
-            char k = keys[i]; // キーコード
-            
+            uint8_t k = keys[i]; // キーコード
+            switch (k) {
+                case HID_KC_UP:
+                    // 上へスクロール
+                    screen_manager_->Scroll(true);
+                    return;
+                    break;
+                case HID_KC_DOWN:
+                    // 下へスクロール
+                    screen_manager_->Scroll();
+                    return;
+                    break;
+                default:
+                    break;
+            }
 
             char c = key_code_list[k]; // ASCII文字
             if (c) {
