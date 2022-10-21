@@ -6,7 +6,7 @@ OBJS = main.o graphics.o font.o hankaku.o console.o newlib_support.o logging.o a
 		rtl8139/rtl8139.o rtl8139/packet.o ioapic.o network/ethernet.o network/network_lib.o \
 		network/arp.o network/ip.o network/network.o network/tcp.o \
 		acpi.o \
-		screen.o
+		screen.o terminal.o
 CFLAGS   += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone
 CXXFLAGS += -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone \
             -fno-exceptions -fno-rtti -std=c++17

@@ -26,6 +26,7 @@
 #include "network/network.hpp"
 #include "acpi.hpp"
 #include "screen.hpp"
+#include "terminal.hpp"
 
 void Halt(void);
 int printk(const char *format, ...);
@@ -84,7 +85,7 @@ extern "C" void KernelMainNewStack(
     InitializePCI();
 
     // console->Activate();
-    ScreenInit(&frame_buffer_config);
+    RunTerminal(&frame_buffer_config);
     Halt();
 
     logger->set_level(logging::kDEBUG); // 出力減らす

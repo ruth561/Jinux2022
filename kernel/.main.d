@@ -68,4 +68,4 @@ main.o: main.cpp \
   rtl8139/../network/tcp.hpp rtl8139/../network/../logging.hpp \
   rtl8139/../network/arp.hpp rtl8139/../network/network_lib.hpp \
   rtl8139/../network/../rtl8139/rtl8139.hpp ioapic.hpp \
-  network/network.hpp screen.hpp
+  network/network.hpp screen.hpp terminal.hpp

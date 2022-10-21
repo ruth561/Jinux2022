@@ -120,7 +120,3 @@ private:
     void CopyLine(uint32_t c_y);
 
 };
-
-
-// 仮の関数
-void ScreenInit(const FrameBufferConfig *config);
