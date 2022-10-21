@@ -98,6 +98,7 @@ ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &defaul
     base_ = 0;
     cursor_col_ = 0;
     cursor_row_ = 0;
+    long_frame_begin_ = 0;
     long_frame_end_ = 0;
     // ロングフレームの最初をバックグラウンドカラーで埋める
     for (int c_y = 0; c_y < frame_rows_; c_y++) {
@@ -114,6 +115,22 @@ bool ScreenManager::IsCursorInFrame()
 {
     return (0 <= cursor_row_ - base_) && \
            (cursor_row_ - base_ < frame_rows_);
+}
+
+void ScreenManager::MoveFrameToCursor(bool upper)
+{
+    if (upper) {
+        base_ = cursor_row_;
+    } else {
+        // max(cursor_row_ - frame_rows_ + 1, long_frame_begin)_)
+        if (long_frame_begin_ + frame_rows_ > cursor_row_) {
+            // ロングフレームの先頭にフレームを持ってきた時、カーソルがその範囲内にいれば
+            base_ = long_frame_begin_;
+        } else {
+            base_ = cursor_row_ - frame_rows_ + 1;
+        }
+    }
+    CopyAll();
 }
 
 
@@ -174,6 +191,7 @@ void ScreenManager::CopyAll()
         }
         CopyLine(base_ + row);
     }
+    CursorShow();
 }
 
 void ScreenManager::WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharData &c_data)
@@ -249,23 +267,24 @@ void ScreenManager::Scroll(bool reverse)
 {
     if (reverse) {
         // 上にスクロール
-        if (base_ > 0) {
+        if (base_ > long_frame_begin_) {
             base_--;
-            CopyAll();
         } 
     } else {
         // 下へスクロール
         // カーソルより下へはスクロールしない
         if (base_ < cursor_row_) {
             base_++;
-            CopyAll();
         }
     }
-    CursorShow();
+    CopyAll();
 }
 
 void ScreenManager::CursorShow()
 {
+    if (!IsCursorInFrame()) {
+        return;
+    }
     uint32_t c_x = cursor_col_;
     uint32_t c_y = cursor_row_ - base_;
     for (int dx = 0; dx < 8; dx++) {
@@ -298,13 +317,15 @@ void ScreenInit(const FrameBufferConfig *config)
 
 
     screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    /* screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
     screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
     screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
     screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
-    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
-    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n");
+    screen_manager->PutString("Hello, world.\n\nSee You..\n\n\n\nOhh\n"); */
+    screen_manager->PutString("AAAAAAA");
 
-
+    screen_manager->Scroll(false);
+    screen_manager->MoveFrameToCursor();
 
     // screen_manager->CopyAll();
     /* for (int i = 0; i < 3; i++) {

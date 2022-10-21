@@ -67,7 +67,9 @@ public:
     // 現在のカーソルがフレーム内にいればtrueを返す
     bool IsCursorInFrame();
     // カーソルが見える位置に行くまでフレームを移動する。
-    // void MoveFrameToCursor();
+    // upperがtrueの時、カーソルがフレームの一番上になるように移動する
+    // 基本は一番下になる。
+    void MoveFrameToCursor(bool upper = false);
     
     // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
     void PutChar(const CharData &c_data);
@@ -75,10 +77,11 @@ public:
     // 文字列を出力する。文字色と背景色を指定できる。
     void PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color);
     void PutString(const char *s); // 色はデフォルトのものを使う
-    // 画面の移動をする
+    // 画面を1行下に（上に）移動する
     void Scroll(bool reverse = false); // reverse=trueの時は上に移動する
 
     // フレームへロングフレームバッファのデータを全体にコピーする。
+    // その後カーソルを表示する
     void CopyAll();
 private:
     Frame *frame_; // 画面に出力する部分のフレーム
@@ -89,7 +92,13 @@ private:
     uint32_t long_frame_rows_; // ロングフレームの行数（文字）
     uint32_t long_frame_cols_; // ロングフレームの列数（文字）
 
-    uint32_t long_frame_end_; // ロングフレームで背景色を埋めたライン(0<= row < long_frame_end_の範囲だけ背景が塗りつぶされているので、スクロール時など注意)
+    /* 
+     * 各メンバ変数の関係は以下のようになっている必要がある
+     * long_frame_begin_ <= cursor_row_, base_
+     * long_frame_end_ > cursor_row_, base_ 
+     */
+    uint32_t long_frame_begin_; // ロングフレームで有効な範囲の最初。バッファをリングにするときなどに使えそう。
+    uint32_t long_frame_end_; // ロングフレームで背景色を埋めたライン(long_frame_begin_ <= row < long_frame_end_の範囲だけ背景が塗りつぶされているので、スクロール時など注意)
 
     uint32_t base_{0}; // ロングフレームにおけるフレームの位置
     uint32_t cursor_row_{0}; // カーソル位置（ロングフレーム・行）
