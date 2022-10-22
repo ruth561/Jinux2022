@@ -72,12 +72,12 @@ void Terminal::OnKeyStroke(uint8_t *keys)
             uint8_t k = keys[i]; // キーコード
             switch (k) {
                 case HID_KC_UP:
-                    // 上へスクロール
-                    screen_manager_->Scroll(true);
+                    // カーソルを上へ移動
+                    screen_manager_->MoveCursor(CursorMove::Up);
                     break;
                 case HID_KC_DOWN:
-                    // 下へスクロール
-                    screen_manager_->Scroll();
+                    // カーソルを下へ移動
+                    screen_manager_->MoveCursor(CursorMove::Down);
                     break;
                 case HID_KC_RIGHT:
                     // カーソルを右へ動かす

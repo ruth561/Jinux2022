@@ -135,6 +135,28 @@ void ScreenManager::MoveCursor(CursorMove dir)
     CopyChar(cursor_col_, cursor_row_);
 
     switch (dir) {
+        case CursorMove::Up:
+            if (cursor_row_ > long_frame_begin_) {
+                cursor_row_--;
+            }
+            if (!IsCursorInFrame()) {
+                // カーソルが画面から消えてしまったら上にスクロールする
+                Scroll(true);
+            }
+            break;
+
+        case CursorMove::Down:
+            cursor_row_++;
+            if (cursor_row_ == long_frame_end_) {
+                // ロングフレームの下端に達してしまったら
+                FillLine(long_frame_end_, default_bg_color_);
+                long_frame_end_++;
+            }
+            if (!IsCursorInFrame()) {
+                Scroll();
+            }
+            break;
+            
         case CursorMove::Right:
             if (cursor_col_ + 1 < frame_cols_) {
                 cursor_col_++;
