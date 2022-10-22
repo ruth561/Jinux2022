@@ -28,6 +28,13 @@ struct CharData {
     PixelColor bg_color; // 背景色
 };
 
+enum class CursorMove {
+    Up,
+    Down,
+    Right, 
+    Left
+};
+
 /* 
  * ピクセルの位置を特定したり、その位置へ指定した色を書き込んだりするクラス
  */
@@ -67,7 +74,9 @@ public:
     // カーソルが見える位置に行くまでフレームを移動する。
     // upperがtrueの時、カーソルがフレームの一番上になるように移動する。デフォルトは一番下。
     void MoveFrameToCursor(bool upper = false);
-    
+    // カーソルを移動する。
+    void MoveCursor(CursorMove dir);
+
     // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
     void PutChar(const CharData &c_data);
     void PutChar(char c); // 色はデフォルトのものを使う

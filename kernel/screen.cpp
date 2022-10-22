@@ -70,7 +70,7 @@ void Frame::WriteChar(uint32_t p_x, uint32_t p_y, const CharData &c_data)
  */
 
 /* 
- * PUVLICな関数
+ * PUBLICな関数
  */
 ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &default_fg_color, PixelColor &default_bg_color) :
     default_fg_color_{default_fg_color}, default_bg_color_{default_bg_color}
@@ -127,6 +127,28 @@ void ScreenManager::MoveFrameToCursor(bool upper)
         }
     }
     CopyAll();
+}
+
+void ScreenManager::MoveCursor(CursorMove dir)
+{
+    // カーソルのいた場所に元々のデータをコピーする
+    CopyChar(cursor_col_, cursor_row_);
+
+    switch (dir) {
+        case CursorMove::Right:
+            if (cursor_col_ + 1 < frame_cols_) {
+                cursor_col_++;
+            }
+            break;
+        
+        case CursorMove::Left:
+            if (cursor_col_ > 0) {
+                cursor_col_--;
+            }
+            break;
+    }
+
+    CursorShow();
 }
 
 void ScreenManager::PutChar(const CharData &c_data)
