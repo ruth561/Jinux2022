@@ -84,9 +84,9 @@ extern "C" void KernelMainNewStack(
     logger->set_level(logging::kERROR); // 出力減らす
     InitializePCI();
 
-    console->Activate();
+    // console->Activate();
 
-    logger->set_level(logging::kDEBUG); // 出力減らす
+    logger->set_level(logging::kERROR); // 出力減らす
     // network::Initialize();
 
     // Halt();

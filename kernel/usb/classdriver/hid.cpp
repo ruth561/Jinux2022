@@ -100,10 +100,12 @@ namespace
             for (int i = 2; i < 8; i++) {
                 if (keys[i] < sizeof(kKeyCord)) {
                     key[0] = kKeyCord[keys[i]];
-                    printk(key);
+                    // printk(key);
+                    printk("%02hhx ", keys[i]);
                 }
             }
         }
+        printk("\n");
     }
 }
 

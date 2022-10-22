@@ -64,11 +64,8 @@ public:
     Frame *LongFramePtr() { return long_frame_; }
     Frame *FramePtr() { return frame_; }
 
-    // 現在のカーソルがフレーム内にいればtrueを返す
-    bool IsCursorInFrame();
     // カーソルが見える位置に行くまでフレームを移動する。
-    // upperがtrueの時、カーソルがフレームの一番上になるように移動する
-    // 基本は一番下になる。
+    // upperがtrueの時、カーソルがフレームの一番上になるように移動する。デフォルトは一番下。
     void MoveFrameToCursor(bool upper = false);
     
     // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
@@ -80,9 +77,6 @@ public:
     // 画面を1行下に（上に）移動する
     void Scroll(bool reverse = false); // reverse=trueの時は上に移動する
 
-    // フレームへロングフレームバッファのデータを全体にコピーする。
-    // その後カーソルを表示する
-    void CopyAll();
 private:
     Frame *frame_; // 画面に出力する部分のフレーム
     Frame *long_frame_; // これまでの出力結果なども保存してある巨大なフレーム
@@ -91,12 +85,10 @@ private:
     uint32_t frame_cols_; // フレームの列数（文字）
     uint32_t long_frame_rows_; // ロングフレームの行数（文字）
     uint32_t long_frame_cols_; // ロングフレームの列数（文字）
-
-    /* 
-     * 各メンバ変数の関係は以下のようになっている必要がある
-     * long_frame_begin_ <= cursor_row_, base_
-     * long_frame_end_ > cursor_row_, base_ 
-     */
+    // 各メンバ変数の関係は以下のようになっている必要がある
+    // long_frame_begin_ <= cursor_row_, base_
+    // long_frame_end_ > cursor_row_, base_ 
+    
     uint32_t long_frame_begin_; // ロングフレームで有効な範囲の最初。バッファをリングにするときなどに使えそう。
     uint32_t long_frame_end_; // ロングフレームで背景色を埋めたライン(long_frame_begin_ <= row < long_frame_end_の範囲だけ背景が塗りつぶされているので、スクロール時など注意)
 
@@ -107,16 +99,25 @@ private:
     PixelColor default_fg_color_;
     PixelColor default_bg_color_;
 
+    // 現在のカーソルがフレーム内にいればtrueを返す
+    bool IsCursorInFrame();
+
+    /* ロングフレーム自体に書き込む便利関数 */
     // ロングフレームの(c_x, c_y)に文字を書き込む。(c_x, c_y)はピクセルではなく文字の行と列である。
     void WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharData &c_data);
+    // 指定したロングフレームの行c_yをデフォルトのバックグラウンドカラーで塗りつぶす
+    void FillLine(uint32_t c_y, PixelColor &color);
+
+    /* 画面出力するための便利関数 */
     // ロングフレームの(c_x, c_y)にある文字をフレームに書き込む。
     // 書き込む先がフレーム内でなければ何もしない。
     void CopyChar(uint32_t c_x, uint32_t c_y);
-    // 現在のカーソル位置にカーソルを表示する。色は指定できる。
-    void CursorShow();
-    // 指定したロングフレームの行c_yをデフォルトのバックグラウンドカラーで塗りつぶす
-    void FillLine(uint32_t c_y, PixelColor &color);
     // 第c_y行目の文字列をコピーする。
     void CopyLine(uint32_t c_y);
+    // フレームへロングフレームバッファのデータを全体にコピーする。
+    // その後カーソルを表示する
+    void CopyAll();
+    // 現在のカーソル位置にカーソルを表示する。色は指定できる。
+    void CursorShow();
 
 };

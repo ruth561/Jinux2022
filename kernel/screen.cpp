@@ -69,7 +69,9 @@ void Frame::WriteChar(uint32_t p_x, uint32_t p_y, const CharData &c_data)
  * =============================================================================================================================
  */
 
-
+/* 
+ * PUVLICな関数
+ */
 ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &default_fg_color, PixelColor &default_bg_color) :
     default_fg_color_{default_fg_color}, default_bg_color_{default_bg_color}
 {
@@ -111,12 +113,6 @@ ScreenManager::ScreenManager(const FrameBufferConfig *config, PixelColor &defaul
     CursorShow();
 }
 
-bool ScreenManager::IsCursorInFrame()
-{
-    return (0 <= cursor_row_ - base_) && \
-           (cursor_row_ - base_ < frame_rows_);
-}
-
 void ScreenManager::MoveFrameToCursor(bool upper)
 {
     if (upper) {
@@ -131,85 +127,6 @@ void ScreenManager::MoveFrameToCursor(bool upper)
         }
     }
     CopyAll();
-}
-
-
-
-void ScreenManager::CopyChar(uint32_t c_x, uint32_t c_y) {
-    if (!long_frame_->IsInFrame(8 * c_x, 16 * c_y)) {
-        // 指定した座標がロングフレームに含まれない時
-        return;
-    }
-    uint32_t src_x = c_x;
-    uint32_t src_y = c_y;
-    uint32_t dst_x = c_x;
-    uint32_t dst_y = c_y - base_;
-    if (!frame_->IsInFrame(8 * dst_x, 16 * dst_y)) {
-        // 指定した文字がフレーム外の時
-        return;
-    }
-
-    for (int i = 0; i < 16; i++) {
-        memcpy(
-            frame_->PixelAt(8 * dst_x, 16 * dst_y + i), 
-            long_frame_->PixelAt(8 * src_x, 16 * src_y + i), 
-            8 * BYTES_PER_PIXEL
-        );
-    }
-    return;
-}
-
-void ScreenManager::CopyLine(uint32_t c_y)
-{
-    if (!long_frame_->IsInFrame(0, 16 * c_y)) {
-        // 指定した行がロングフレームに含まれない時
-        return;
-    }
-    uint32_t src_y = c_y;
-    uint32_t dst_y = c_y - base_;
-    if (!frame_->IsInFrame(0, 16 * dst_y)) {
-        // 指定した行がフレーム外の時
-        return;
-    }
-
-    for (int i = 0; i < 16; i++) {
-        memcpy(
-            frame_->PixelAt(0, 16 * dst_y + i), 
-            long_frame_->PixelAt(0, 16 * src_y + i), 
-            BYTES_PER_PIXEL * frame_cols_ * 8
-        );
-    }
-    return;
-}
-
-void ScreenManager::CopyAll()
-{
-    for (int row = 0; row < frame_rows_; row++) {
-        if (base_ + row >= long_frame_end_) {
-            FillLine(base_ + row, default_bg_color_);
-            long_frame_end_ = base_ + row + 1;
-        }
-        CopyLine(base_ + row);
-    }
-    CursorShow();
-}
-
-void ScreenManager::WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharData &c_data)
-{
-    /* 
-     * 文字は縦16ピクセル、横8ピクセルなので文字を置く領域の左上のアドレスは
-     */
-    long_frame_->WriteChar(c_x * 8, c_y * 16, c_data);
-}
-
-void ScreenManager::FillLine(uint32_t c_y, PixelColor &color)
-{
-    CharData c_data;
-    c_data.val = ' ';
-    c_data.bg_color = color;
-    for (int c_x = 0; c_x < frame_cols_; c_x++) {
-        WriteCharToLongFrame(c_x, c_y, c_data);
-    }
 }
 
 void ScreenManager::PutChar(const CharData &c_data)
@@ -280,6 +197,34 @@ void ScreenManager::Scroll(bool reverse)
     CopyAll();
 }
 
+
+/* 
+ * PRIVATEな関数
+ */
+bool ScreenManager::IsCursorInFrame()
+{
+    return (0 <= cursor_row_ - base_) && \
+           (cursor_row_ - base_ < frame_rows_);
+}
+
+void ScreenManager::WriteCharToLongFrame(uint32_t c_x, uint32_t c_y, const CharData &c_data)
+{
+    /* 
+     * 文字は縦16ピクセル、横8ピクセルなので文字を置く領域の左上のアドレスは
+     */
+    long_frame_->WriteChar(c_x * 8, c_y * 16, c_data);
+}
+
+void ScreenManager::FillLine(uint32_t c_y, PixelColor &color)
+{
+    CharData c_data;
+    c_data.val = ' ';
+    c_data.bg_color = color;
+    for (int c_x = 0; c_x < frame_cols_; c_x++) {
+        WriteCharToLongFrame(c_x, c_y, c_data);
+    }
+}
+
 void ScreenManager::CursorShow()
 {
     if (!IsCursorInFrame()) {
@@ -292,4 +237,63 @@ void ScreenManager::CursorShow()
             frame_->PixelWrite(c_x * 8 + dx, c_y * 16 + dy, default_fg_color_);
         }
     }
+}
+
+void ScreenManager::CopyChar(uint32_t c_x, uint32_t c_y) {
+    if (!long_frame_->IsInFrame(8 * c_x, 16 * c_y)) {
+        // 指定した座標がロングフレームに含まれない時
+        return;
+    }
+    uint32_t src_x = c_x;
+    uint32_t src_y = c_y;
+    uint32_t dst_x = c_x;
+    uint32_t dst_y = c_y - base_;
+    if (!frame_->IsInFrame(8 * dst_x, 16 * dst_y)) {
+        // 指定した文字がフレーム外の時
+        return;
+    }
+
+    for (int i = 0; i < 16; i++) {
+        memcpy(
+            frame_->PixelAt(8 * dst_x, 16 * dst_y + i), 
+            long_frame_->PixelAt(8 * src_x, 16 * src_y + i), 
+            8 * BYTES_PER_PIXEL
+        );
+    }
+    return;
+}
+
+void ScreenManager::CopyLine(uint32_t c_y)
+{
+    if (!long_frame_->IsInFrame(0, 16 * c_y)) {
+        // 指定した行がロングフレームに含まれない時
+        return;
+    }
+    uint32_t src_y = c_y;
+    uint32_t dst_y = c_y - base_;
+    if (!frame_->IsInFrame(0, 16 * dst_y)) {
+        // 指定した行がフレーム外の時
+        return;
+    }
+
+    for (int i = 0; i < 16; i++) {
+        memcpy(
+            frame_->PixelAt(0, 16 * dst_y + i), 
+            long_frame_->PixelAt(0, 16 * src_y + i), 
+            BYTES_PER_PIXEL * frame_cols_ * 8
+        );
+    }
+    return;
+}
+
+void ScreenManager::CopyAll()
+{
+    for (int row = 0; row < frame_rows_; row++) {
+        if (base_ + row >= long_frame_end_) {
+            FillLine(base_ + row, default_bg_color_);
+            long_frame_end_ = base_ + row + 1;
+        }
+        CopyLine(base_ + row);
+    }
+    CursorShow();
 }
