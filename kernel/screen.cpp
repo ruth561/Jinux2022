@@ -202,11 +202,9 @@ uint32_t ScreenManager::PutChar(const CharData &c_data)
         WriteCharToLongFrame(cursor_col_, cursor_row_, c_data);
         CopyChar(cursor_col_, cursor_row_);
 
-        cursor_col_++;
-        if (cursor_col_ >= long_frame_cols_) {
-            // カーソルが画面の右端に到達したら行を変える
-            cursor_col_ = 0;
-            cursor_row_++;
+        if (cursor_col_ + 1 < long_frame_cols_) {
+            // カーソルが右端にいない場合
+            cursor_col_++;
         }
     }
     if (!IsCursorInFrame()) {
