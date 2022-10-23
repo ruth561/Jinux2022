@@ -50,6 +50,7 @@ namespace
 
     #define HID_KC_ESC 0x29
     #define HID_KC_BACK_SPACE 0x2a
+    #define HID_KC_DELETE 0x4c
     #define HID_KC_RIGHT 0x4f
     #define HID_KC_LEFT 0x50
     #define HID_KC_DOWN 0x51
@@ -124,6 +125,9 @@ void Terminal::OnKeyStroke(uint8_t *keys)
                 case HID_KC_BACK_SPACE: // カーソルの一つ左にある文字を消去し、カーソルを左へ移動する
                     HandleBackSpace();
                     break;
+                case HID_KC_DELETE: // カーソル上にある文字を消去する。
+                    HandleDelete();
+                    break;
                 default:
                     break;
             }
@@ -185,6 +189,20 @@ void Terminal::HandleBackSpace()
     }
     cursor_pos_--;
     screen_manager_->MoveCursor(CursorMove::Left);
+    for (int idx = cursor_pos_; idx < s_len_ - 1; idx++) {
+        ibuf_[idx] = ibuf_[idx + 1];
+    }
+    s_len_--;
+    ibuf_[s_len_] = '\x00';
+    screen_manager_->UpdateRightFromCursor(ibuf_ + cursor_pos_);
+}
+
+void Terminal::HandleDelete()
+{
+    if (cursor_pos_ == s_len_) {
+        // カーソルの位置に文字がない場合は何もしない
+        return;
+    }
     for (int idx = cursor_pos_; idx < s_len_ - 1; idx++) {
         ibuf_[idx] = ibuf_[idx + 1];
     }
