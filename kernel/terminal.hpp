@@ -38,6 +38,8 @@ private:
 
     // 入力バッファに文字を書き込み、スクリーンにも表示させる関数
     void PutChar(char c);
+    // バックスペースキーを押されたときに呼ばれる
+    void HandleBackSpace();
     // プロンプトを表示。返り値は表示した後のカーソル位置を示す。内部でcursor_pos_やprompt_lenを決める。
     void PutPrompt();
 };

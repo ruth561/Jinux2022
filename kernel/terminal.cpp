@@ -121,7 +121,9 @@ void Terminal::OnKeyStroke(uint8_t *keys)
                         cursor_pos_ = screen_manager_->MoveCursor(CursorMove::Left);
                     }
                     break;
-
+                case HID_KC_BACK_SPACE: // カーソルの一つ左にある文字を消去し、カーソルを左へ移動する
+                    HandleBackSpace();
+                    break;
                 default:
                     break;
             }
@@ -130,6 +132,14 @@ void Terminal::OnKeyStroke(uint8_t *keys)
             if (c) {
                 // 対応するASCII文字があれば出力しておく
                 PutChar(c);
+            }
+            if (c == '\n') {
+                /* 
+                 * ibuf_から文字列を読み込み実行する
+                 * ここではとりあえずプロンプトの再表示を行う
+                 */
+                PutPrompt();
+                return;
             }
         }
     }
@@ -165,6 +175,22 @@ void Terminal::PutChar(char c)
         // カーソルより右側を表示し直す。
         screen_manager_->UpdateRightFromCursor(ibuf_ + cursor_pos_);
     }
+}
+
+void Terminal::HandleBackSpace()
+{
+    if (cursor_pos_ == prompt_len_) {
+        // カーソルの左側に文字がない場合
+        return;
+    }
+    cursor_pos_--;
+    screen_manager_->MoveCursor(CursorMove::Left);
+    for (int idx = cursor_pos_; idx < s_len_ - 1; idx++) {
+        ibuf_[idx] = ibuf_[idx + 1];
+    }
+    s_len_--;
+    ibuf_[s_len_] = '\x00';
+    screen_manager_->UpdateRightFromCursor(ibuf_ + cursor_pos_);
 }
 
 void Terminal::PutPrompt()

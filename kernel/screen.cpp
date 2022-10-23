@@ -259,6 +259,12 @@ void ScreenManager::UpdateRightFromCursor(const char *s)
         WriteCharToLongFrame(c_x, c_y, c_data);
         s++;
         c_x++;
+        if (c_x == frame_cols_) {
+            // NULL文字がなく、文字がフレームを飛び出た場合
+            CopyLine(c_y);
+            CursorShow();
+            return;
+        }
     }
     // 文字列の終端は背景色で塗るためにスペースを書き込む
     c_data.val = ' ';
