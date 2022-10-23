@@ -90,6 +90,8 @@ public:
     uint32_t PutString(const char *s, PixelColor &fg_color);
     uint32_t PutString(const char *s); // 色はデフォルトのものを使う
 
+    // カーソルから右を新しい文字列に変更する。
+    void UpdateRightFromCursor(const char *s);
 private:
     Frame *frame_; // 画面に出力する部分のフレーム
     Frame *long_frame_; // これまでの出力結果なども保存してある巨大なフレーム

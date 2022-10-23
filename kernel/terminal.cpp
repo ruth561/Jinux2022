@@ -62,7 +62,7 @@ Terminal::Terminal(ScreenManager *screen_manager) :
         screen_manager_{screen_manager} 
 {
     ibuf_len_ = screen_manager_->FrameWidth();
-    ibuf_ = reinterpret_cast<char *>(malloc(ibuf_len_ + 1));
+    ibuf_ = reinterpret_cast<char *>(malloc(ibuf_len_));
 
     strcpy(username_, "user");
     prompt_color_ = PixelColor{0x80, 0xe0, 0x80};
@@ -141,20 +141,30 @@ void Terminal::OnKeyStroke(uint8_t *keys)
  */
 void Terminal::PutChar(char c)
 {
-    if (cursor_pos_ == ibuf_len_ - 1) {
-        // カーソルが右端の時は書き込めない
+    if (s_len_ == ibuf_len_ - 1) {
+        // 表示できる文字列の長さはフレームの横の長さ-1である
         return;
     }
+
     if (cursor_pos_ == s_len_) { 
         // カーソルから右に文字がない場合は一文字出力
         ibuf_[cursor_pos_] = c;
         cursor_pos_ = screen_manager_->PutChar(c);
-        s_len_ = cursor_pos_;
+        s_len_++;
+        ibuf_[s_len_] = '\x00';
     } else {
-        // カーソルから右に文字がある場合
+        // カーソルから右に文字がある場合文字の挿入を実装
+        for (int idx = s_len_; cursor_pos_ < idx; idx--) {
+            ibuf_[idx] = ibuf_[idx - 1];
+        }
+        ibuf_[cursor_pos_] = c;
+        cursor_pos_ = screen_manager_->PutChar(c);
+        s_len_++;
+        ibuf_[s_len_] = '\x00';
 
+        // カーソルより右側を表示し直す。
+        screen_manager_->UpdateRightFromCursor(ibuf_ + cursor_pos_);
     }
-
 }
 
 void Terminal::PutPrompt()

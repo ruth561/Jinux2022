@@ -247,6 +247,25 @@ uint32_t ScreenManager::PutString(const char *s)
     return PutString(s, default_fg_color_, default_bg_color_);
 }
 
+void ScreenManager::UpdateRightFromCursor(const char *s)
+{
+    uint32_t c_x = cursor_col_;
+    uint32_t c_y = cursor_row_;
+    CharData c_data;
+    c_data.fg_color = default_fg_color_;
+    c_data.bg_color = default_bg_color_;
+    while (*s) {
+        c_data.val = *s;
+        WriteCharToLongFrame(c_x, c_y, c_data);
+        s++;
+        c_x++;
+    }
+    // 文字列の終端は背景色で塗るためにスペースを書き込む
+    c_data.val = ' ';
+    WriteCharToLongFrame(c_x, c_y, c_data);
+    CopyLine(c_y);
+    CursorShow();
+}
 
 /* 
  * PRIVATEな関数
