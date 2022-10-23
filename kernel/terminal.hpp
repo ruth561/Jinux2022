@@ -30,6 +30,8 @@ private:
     char username_[20]; // ユーザー名（最大19文字）
     PixelColor prompt_color_; // プロンプトの色（Terminalで初期化される）
 
+    void ProcessKeyStrokeWithCtrl(uint8_t *keys); // Ctrlキーが押された場合の処理はこの関数が行う
+
 };
 
 

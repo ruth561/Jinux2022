@@ -63,11 +63,27 @@ Terminal::Terminal(ScreenManager *screen_manager) :
     strcpy(username_, "user");
     prompt_color_ = PixelColor{0x80, 0xe0, 0x80};
 
+    PutPrompt();
+    state_ = TerminalState::kWaitingForInput;
 }
 
 void Terminal::OnKeyStroke(uint8_t *keys)
 {
+    if (state_ == TerminalState::kRunningApplication) {
+        /* 
+         * アプリ実行時は、Ctfl+Cなどの特殊な命令を受け付けたりするので
+         * 別の処理を行う。
+         * 後でやる。
+         */
+        return;
+    }
+    
     ModifierKey modifier_key{keys[0]};
+    if (modifier_key.bits.left_ctrl || modifier_key.bits.right_ctrl) {
+        // Ctrlキーが押された場合
+        ProcessKeyStrokeWithCtrl(keys);
+        return;
+    }
 
     char *key_code_list = kKeyCord;
     if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
@@ -118,6 +134,38 @@ void Terminal::PutPrompt()
 
 }
 
+
+
+
+/* 
+ * PRIVATE
+ */
+void Terminal::ProcessKeyStrokeWithCtrl(uint8_t *keys)
+{
+
+    for (int i = 2; i < 8; i++) {
+        if (keys[i] < sizeof(kKeyCord)) {
+            uint8_t k = keys[i]; // キーコード
+            switch (k) {
+                case HID_KC_UP:
+                    // 上スクロール
+                    screen_manager_->Scroll(true);
+                    break;
+                case HID_KC_DOWN:
+                    // 下スクロール
+                    screen_manager_->Scroll();
+                    break;
+                case HID_KC_RIGHT:
+                    break;
+                case HID_KC_LEFT:
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+}
+
 void RunTerminal(const FrameBufferConfig *config)
 {
     console->Deactivate();
@@ -127,7 +175,5 @@ void RunTerminal(const FrameBufferConfig *config)
     ScreenManager *screen_manager = new ScreenManager{config, fg_color, bg_color};
 
     terminal = new Terminal{screen_manager};
-
-    terminal->PutPrompt();
 
 }
