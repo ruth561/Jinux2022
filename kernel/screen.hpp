@@ -70,23 +70,25 @@ public:
     ScreenManager(const FrameBufferConfig *config, PixelColor &default_fg_color, PixelColor &default_bg_color);
     Frame *LongFramePtr() { return long_frame_; }
     Frame *FramePtr() { return frame_; }
+    uint32_t FrameWidth() { return frame_cols_; }
 
     // カーソルが見える位置に行くまでフレームを移動する。
     // upperがtrueの時、カーソルがフレームの一番上になるように移動する。デフォルトは一番下。
     void MoveFrameToCursor(bool upper = false);
-    // カーソルを移動する。上下の移動では、long_frame_の境界判定が行われるが、
-    // いくらでも下へ行けるようになっているので、注意が必要。
-    void MoveCursor(CursorMove dir);
-
-    // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
-    void PutChar(const CharData &c_data);
-    void PutChar(char c); // 色はデフォルトのものを使う
-    // 文字列を出力する。文字色と背景色を指定できる。
-    void PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color);
-    void PutString(const char *s, PixelColor &fg_color);
-    void PutString(const char *s); // 色はデフォルトのものを使う
     // 画面を1行下に（上に）移動する
     void Scroll(bool reverse = false); // reverse=trueの時は上に移動する
+
+    // カーソルを移動する。上下の移動では、long_frame_の境界判定が行われるが、
+    // いくらでも下へ行けるようになっているので、注意が必要。
+    // 返り値は、処理をした後のカーソルの左端からの位置（cursor_col_）
+    uint32_t MoveCursor(CursorMove dir);
+    // 現在のカーソルに1文字書き込む。カーソルの位置も変化し、画面への出力も行う。
+    uint32_t PutChar(const CharData &c_data);
+    uint32_t PutChar(char c); // 色はデフォルトのものを使う
+    // 文字列を出力する。文字色と背景色を指定できる。
+    uint32_t PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color);
+    uint32_t PutString(const char *s, PixelColor &fg_color);
+    uint32_t PutString(const char *s); // 色はデフォルトのものを使う
 
 private:
     Frame *frame_; // 画面に出力する部分のフレーム

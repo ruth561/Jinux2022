@@ -129,7 +129,24 @@ void ScreenManager::MoveFrameToCursor(bool upper)
     CopyAll();
 }
 
-void ScreenManager::MoveCursor(CursorMove dir)
+void ScreenManager::Scroll(bool reverse)
+{
+    if (reverse) {
+        // 上にスクロール
+        if (base_ > long_frame_begin_) {
+            base_--;
+        } 
+    } else {
+        // 下へスクロール
+        // カーソルより下へはスクロールしない
+        if (base_ < cursor_row_) {
+            base_++;
+        }
+    }
+    CopyAll();
+}
+
+uint32_t ScreenManager::MoveCursor(CursorMove dir)
 {
     // カーソルのいた場所に元々のデータをコピーする
     CopyChar(cursor_col_, cursor_row_);
@@ -171,9 +188,10 @@ void ScreenManager::MoveCursor(CursorMove dir)
     }
 
     CursorShow();
+    return cursor_col_;
 }
 
-void ScreenManager::PutChar(const CharData &c_data)
+uint32_t ScreenManager::PutChar(const CharData &c_data)
 {
     if (c_data.val == '\n') {
         // 改行を出力する時は行を変える
@@ -196,18 +214,19 @@ void ScreenManager::PutChar(const CharData &c_data)
         Scroll();
     }
     CursorShow();
+    return cursor_col_;
 }
 
-void ScreenManager::PutChar(char c)
+uint32_t ScreenManager::PutChar(char c)
 {
     CharData c_data;
     c_data.val = c;
     c_data.fg_color = default_fg_color_;
     c_data.bg_color = default_bg_color_;
-    PutChar(c_data);
+    return PutChar(c_data);
 }
 
-void ScreenManager::PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color)
+uint32_t ScreenManager::PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color)
 {
     CharData c_data;
     c_data.fg_color = fg_color;
@@ -217,33 +236,17 @@ void ScreenManager::PutString(const char *s, PixelColor &fg_color, PixelColor &b
         PutChar(c_data);
         s++;
     }
+    return cursor_col_;
 }
 
-void ScreenManager::PutString(const char *s, PixelColor &fg_color)
+uint32_t ScreenManager::PutString(const char *s, PixelColor &fg_color)
 {
-    PutString(s, fg_color, default_bg_color_);
+    return PutString(s, fg_color, default_bg_color_);
 }
 
-void ScreenManager::PutString(const char *s)
+uint32_t ScreenManager::PutString(const char *s)
 {
-    PutString(s, default_fg_color_, default_bg_color_);
-}
-
-void ScreenManager::Scroll(bool reverse)
-{
-    if (reverse) {
-        // 上にスクロール
-        if (base_ > long_frame_begin_) {
-            base_--;
-        } 
-    } else {
-        // 下へスクロール
-        // カーソルより下へはスクロールしない
-        if (base_ < cursor_row_) {
-            base_++;
-        }
-    }
-    CopyAll();
+    return PutString(s, default_fg_color_, default_bg_color_);
 }
 
 

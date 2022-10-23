@@ -87,6 +87,7 @@ void Terminal::OnKeyStroke(uint8_t *keys)
 
     char *key_code_list = kKeyCord;
     if (modifier_key.bits.left_shift || modifier_key.bits.right_shift) {
+        // Shiftが押されている場合は表示する文字が大文字になる
         key_code_list = kKeyCordShift;
     }
     
@@ -94,6 +95,7 @@ void Terminal::OnKeyStroke(uint8_t *keys)
         if (keys[i] < sizeof(kKeyCord)) {
             uint8_t k = keys[i]; // キーコード
             switch (k) {
+                /* カーソルの上下移動はしないよ（テキストエディタでは使えるかも）
                 case HID_KC_UP:
                     // カーソルを上へ移動
                     screen_manager_->MoveCursor(CursorMove::Up);
@@ -101,15 +103,18 @@ void Terminal::OnKeyStroke(uint8_t *keys)
                 case HID_KC_DOWN:
                     // カーソルを下へ移動
                     screen_manager_->MoveCursor(CursorMove::Down);
+                    break; */
+                case HID_KC_RIGHT: // カーソルを右へ動かす
+                    cursor_pos_ = screen_manager_->MoveCursor(CursorMove::Right);
                     break;
-                case HID_KC_RIGHT:
-                    // カーソルを右へ動かす
-                    screen_manager_->MoveCursor(CursorMove::Right);
+
+                case HID_KC_LEFT: // カーソルを左へ動かす
+                    if (prompt_len_ < cursor_pos_) {
+                        // プロンプトは消さないようにする
+                        cursor_pos_ = screen_manager_->MoveCursor(CursorMove::Left);
+                    }
                     break;
-                case HID_KC_LEFT:
-                    // カーソルを左へ動かす
-                    screen_manager_->MoveCursor(CursorMove::Left);
-                    break;
+
                 default:
                     break;
             }
@@ -117,12 +122,16 @@ void Terminal::OnKeyStroke(uint8_t *keys)
             char c = key_code_list[k]; // ASCII文字
             if (c) {
                 // 対応するASCII文字があれば出力しておく
-                screen_manager_->PutChar(c);
+                cursor_pos_ = screen_manager_->PutChar(c);
             }
         }
     }
 }
 
+
+/* 
+ * PRIVATE
+ */
 void Terminal::PutPrompt()
 {
     screen_manager_->PutString(username_, prompt_color_);
@@ -130,16 +139,10 @@ void Terminal::PutPrompt()
     /* 
      * ここにカレントディレクトリを書きたい。
      */
-    screen_manager_->PutString("$ ", prompt_color_);
-
+    cursor_pos_ = screen_manager_->PutString("$ ", prompt_color_);
+    prompt_len_ = cursor_pos_;
 }
 
-
-
-
-/* 
- * PRIVATE
- */
 void Terminal::ProcessKeyStrokeWithCtrl(uint8_t *keys)
 {
 
@@ -165,6 +168,8 @@ void Terminal::ProcessKeyStrokeWithCtrl(uint8_t *keys)
         }
     }
 }
+
+
 
 void RunTerminal(const FrameBufferConfig *config)
 {
