@@ -219,6 +219,11 @@ void ScreenManager::PutString(const char *s, PixelColor &fg_color, PixelColor &b
     }
 }
 
+void ScreenManager::PutString(const char *s, PixelColor &fg_color)
+{
+    PutString(s, fg_color, default_bg_color_);
+}
+
 void ScreenManager::PutString(const char *s)
 {
     PutString(s, default_fg_color_, default_bg_color_);

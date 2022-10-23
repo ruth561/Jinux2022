@@ -57,6 +57,13 @@ namespace
 }
 
 
+Terminal::Terminal(ScreenManager *screen_manager) :
+        screen_manager_{screen_manager} 
+{
+    strcpy(username_, "user");
+    prompt_color_ = PixelColor{0x80, 0xe0, 0x80};
+
+}
 
 void Terminal::OnKeyStroke(uint8_t *keys)
 {
@@ -100,6 +107,17 @@ void Terminal::OnKeyStroke(uint8_t *keys)
     }
 }
 
+void Terminal::PutPrompt()
+{
+    screen_manager_->PutString(username_, prompt_color_);
+    screen_manager_->PutString("@jinux-2022: ", prompt_color_);
+    /* 
+     * ここにカレントディレクトリを書きたい。
+     */
+    screen_manager_->PutString("$ ", prompt_color_);
+
+}
+
 void RunTerminal(const FrameBufferConfig *config)
 {
     console->Deactivate();
@@ -109,5 +127,7 @@ void RunTerminal(const FrameBufferConfig *config)
     ScreenManager *screen_manager = new ScreenManager{config, fg_color, bg_color};
 
     terminal = new Terminal{screen_manager};
+
+    terminal->PutPrompt();
 
 }

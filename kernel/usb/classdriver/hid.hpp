@@ -48,7 +48,6 @@ namespace usb
 
         uint8_t prev_keys_[8]; // 直前のキー入力の値
 
-
         char buf_[256]; // データの受け渡しに使われるバッファ
     };
 }

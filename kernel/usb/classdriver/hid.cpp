@@ -97,6 +97,8 @@ namespace
                 }
             }
         } else {
+            printk("%02hhx ", keys[0]);
+            printk("%02hhx ", keys[1]);
             for (int i = 2; i < 8; i++) {
                 if (keys[i] < sizeof(kKeyCord)) {
                     key[0] = kKeyCord[keys[i]];

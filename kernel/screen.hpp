@@ -83,6 +83,7 @@ public:
     void PutChar(char c); // 色はデフォルトのものを使う
     // 文字列を出力する。文字色と背景色を指定できる。
     void PutString(const char *s, PixelColor &fg_color, PixelColor &bg_color);
+    void PutString(const char *s, PixelColor &fg_color);
     void PutString(const char *s); // 色はデフォルトのものを使う
     // 画面を1行下に（上に）移動する
     void Scroll(bool reverse = false); // reverse=trueの時は上に移動する

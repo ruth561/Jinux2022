@@ -30,5 +30,15 @@ terminal.o: terminal.cpp terminal.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/assert.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/_ansi.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/functional \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/bit screen.hpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/bit \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/string \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/string_view \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__string \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cwchar \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cwctype \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cctype \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/ctype.h \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/wctype.h screen.hpp \
   frame_buffer_config.hpp graphics.hpp console.hpp font.hpp
