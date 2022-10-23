@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "terminal.hpp"
 extern Console *console;
 Terminal *terminal = NULL;
@@ -60,6 +61,9 @@ namespace
 Terminal::Terminal(ScreenManager *screen_manager) :
         screen_manager_{screen_manager} 
 {
+    ibuf_len_ = screen_manager_->FrameWidth();
+    ibuf_ = reinterpret_cast<char *>(malloc(ibuf_len_ + 1));
+
     strcpy(username_, "user");
     prompt_color_ = PixelColor{0x80, 0xe0, 0x80};
 
@@ -105,7 +109,10 @@ void Terminal::OnKeyStroke(uint8_t *keys)
                     screen_manager_->MoveCursor(CursorMove::Down);
                     break; */
                 case HID_KC_RIGHT: // カーソルを右へ動かす
-                    cursor_pos_ = screen_manager_->MoveCursor(CursorMove::Right);
+                    if (cursor_pos_ < s_len_) {
+                        // 文字の置かれていないところへの移動はできない
+                        cursor_pos_ = screen_manager_->MoveCursor(CursorMove::Right);
+                    }
                     break;
 
                 case HID_KC_LEFT: // カーソルを左へ動かす
@@ -122,7 +129,7 @@ void Terminal::OnKeyStroke(uint8_t *keys)
             char c = key_code_list[k]; // ASCII文字
             if (c) {
                 // 対応するASCII文字があれば出力しておく
-                cursor_pos_ = screen_manager_->PutChar(c);
+                PutChar(c);
             }
         }
     }
@@ -132,6 +139,24 @@ void Terminal::OnKeyStroke(uint8_t *keys)
 /* 
  * PRIVATE
  */
+void Terminal::PutChar(char c)
+{
+    if (cursor_pos_ == ibuf_len_ - 1) {
+        // カーソルが右端の時は書き込めない
+        return;
+    }
+    if (cursor_pos_ == s_len_) { 
+        // カーソルから右に文字がない場合は一文字出力
+        ibuf_[cursor_pos_] = c;
+        cursor_pos_ = screen_manager_->PutChar(c);
+        s_len_ = cursor_pos_;
+    } else {
+        // カーソルから右に文字がある場合
+
+    }
+
+}
+
 void Terminal::PutPrompt()
 {
     screen_manager_->PutString(username_, prompt_color_);
@@ -141,6 +166,7 @@ void Terminal::PutPrompt()
      */
     cursor_pos_ = screen_manager_->PutString("$ ", prompt_color_);
     prompt_len_ = cursor_pos_;
+    s_len_ = prompt_len_;
 }
 
 void Terminal::ProcessKeyStrokeWithCtrl(uint8_t *keys)

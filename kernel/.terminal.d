@@ -1,6 +1,7 @@
-terminal.o: terminal.cpp terminal.hpp \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/array \
+terminal.o: terminal.cpp \
+  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__config \
+  terminal.hpp /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/array \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/version \
@@ -19,7 +20,6 @@ terminal.o: terminal.cpp terminal.hpp \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/typeinfo \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/exception \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
-  /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/new \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/algorithm \
   /home/ruth/osbook/devenv/x86_64-elf/include/c++/v1/memory \
